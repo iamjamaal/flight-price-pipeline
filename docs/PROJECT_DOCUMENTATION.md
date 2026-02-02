@@ -26,12 +26,12 @@
 The Flight Price Pipeline is an enterprise-grade ETL (Extract, Transform, Load) system designed to process, validate, transform, and analyze flight pricing data from Bangladesh's aviation market. The pipeline processes 57,000+ flight records daily, generating actionable business intelligence through automated KPI computation.
 
 ### Key Achievements
-- ✅ **100% Data Success Rate**: All pipeline tasks achieve 100% execution success
-- ✅ **57,000 Records Processed**: Complete dataset transformation from CSV to analytics-ready format
-- ✅ **4 KPI Tables**: Automated computation of business metrics
-- ✅ **Zero Downtime**: Dockerized infrastructure with health monitoring
-- ✅ **Data Quality**: 100% completeness across all critical fields
-- ✅ **Real-time Monitoring**: 9 monitoring views with 15-minute health checks
+-  **100% Data Success Rate**: All pipeline tasks achieve 100% execution success
+-  **57,000 Records Processed**: Complete dataset transformation from CSV to analytics-ready format
+-  **4 KPI Tables**: Automated computation of business metrics
+-  **Zero Downtime**: Dockerized infrastructure with health monitoring
+-  **Data Quality**: 100% completeness across all critical fields
+-  **Real-time Monitoring**: 9 monitoring views with 15-minute health checks
 
 ### Technical Highlights
 - **Dual Database Architecture**: MySQL staging + PostgreSQL analytics
