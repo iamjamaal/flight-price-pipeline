@@ -18,6 +18,7 @@ from data_ingestion import DataIngestion
 from data_validation import DataValidator
 from data_transformation import DataTransformer
 from kpi_computation import KPIComputer
+from monitoring import PipelineMonitor
 
 # Default arguments
 default_args = {
@@ -182,6 +183,30 @@ def log_pipeline_execution(**context):
     }
 
 
+def monitor_pipeline_health(**context):
+    """Monitor pipeline health after execution"""
+    monitor = PipelineMonitor()
+    
+    print("\n" + "="*80)
+    print("POST-EXECUTION HEALTH CHECK")
+    print("="*80)
+    
+    health_status = monitor.get_pipeline_health_status()
+    print(f"Overall Status: {health_status['overall_status']}")
+    
+    # Log any issues
+    if health_status['overall_status'] != 'HEALTHY':
+        monitor.send_alert(
+            alert_type='PIPELINE_COMPLETION',
+            message=f"Pipeline completed with status: {health_status['overall_status']}",
+            severity='WARNING' if health_status['overall_status'] == 'WARNING' else 'ERROR'
+        )
+    else:
+        print("✅ Pipeline health check PASSED")
+    
+    return health_status['overall_status']
+
+
 # Create DAG
 with DAG(
     dag_id=airflow_config.DAG_ID,
@@ -334,7 +359,27 @@ with DAG(
         """
     )
     
-    # Task 7: End pipeline marker
+    # Task 7: Monitor Pipeline Health
+    monitor_health = PythonOperator(
+        task_id='monitor_health',
+        python_callable=monitor_pipeline_health,
+        provide_context=True,
+        doc_md="""
+        ### Monitor Pipeline Health
+        
+        **Purpose**: Check pipeline health and data quality after execution
+        
+        **Checks**:
+        - Database connectivity
+        - Data freshness
+        - Validation status
+        - Performance metrics
+        
+        **Output**: Health status and alerts if needed
+        """
+    )
+    
+    # Task 8: End pipeline marker
     end_pipeline = BashOperator(
         task_id='end_pipeline',
         bash_command='echo "✓ Flight Price Pipeline Completed Successfully - $(date)"',
@@ -345,4 +390,4 @@ with DAG(
     )
     
     # Define task dependencies
-    start_pipeline >> data_ingestion >> data_validation >> data_transformation >> kpi_computation >> log_execution >> end_pipeline
+    start_pipeline >> data_ingestion >> data_validation >> data_transformation >> kpi_computation >> log_execution >> monitor_health >> end_pipeline

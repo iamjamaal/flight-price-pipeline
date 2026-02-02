@@ -363,7 +363,8 @@ class DataValidator:
             failed_checks = [r for r in self.validation_results if r['status'] == 'FAILED']
             warning_checks = [r for r in self.validation_results if r['status'] == 'WARNING']
             
-            overall_status = 'FAILED' if failed_checks else 'WARNING' if warning_checks else 'PASSED'
+            # Use 'SUCCESS' to match other pipeline tasks (not 'PASSED')
+            overall_status = 'FAILED' if failed_checks else 'WARNING' if warning_checks else 'SUCCESS'
             
             return {
                 'status': overall_status,
