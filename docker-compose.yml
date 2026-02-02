@@ -1,5 +1,3 @@
-version: '3.8'
-
 x-airflow-common:
   &airflow-common
   image: apache/airflow:2.8.0-python3.11
@@ -35,7 +33,7 @@ services:
       MYSQL_USER: staging_user
       MYSQL_PASSWORD: staging_pass
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
       - ./init-scripts/mysql:/docker-entrypoint-initdb.d
@@ -94,8 +92,6 @@ services:
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
-      airflow-init:
-        condition: service_completed_successfully
 
   # Airflow Scheduler
   airflow-scheduler:
@@ -110,8 +106,6 @@ services:
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
-      airflow-init:
-        condition: service_completed_successfully
 
   # Airflow Init
   airflow-init:

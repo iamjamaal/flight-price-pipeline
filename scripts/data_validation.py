@@ -322,7 +322,7 @@ class DataValidator:
     def log_validation_results(self):
         """Log all validation results to database"""
         try:
-            with self.mysql_engine.connect() as conn:
+            with self.mysql_engine.begin() as conn:
                 for result in self.validation_results:
                     query = text("""
                         INSERT INTO data_quality_log 
@@ -330,7 +330,6 @@ class DataValidator:
                         VALUES (:check_name, :status, :records_checked, :records_failed, :error_details)
                     """)
                     conn.execute(query, result)
-                conn.commit()
                 
             logger.info(f"Logged {len(self.validation_results)} validation results")
         except Exception as e:

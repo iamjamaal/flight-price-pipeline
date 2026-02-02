@@ -23,7 +23,12 @@ CREATE TABLE kpi_average_fare_by_airline (
     id SERIAL PRIMARY KEY,
     airline VARCHAR(100) UNIQUE,
     avg_base_fare DECIMAL(10, 2),
+    min_base_fare DECIMAL(10, 2),
+    max_base_fare DECIMAL(10, 2),
+    avg_tax_surcharge DECIMAL(10, 2),
     avg_total_fare DECIMAL(10, 2),
+    min_total_fare DECIMAL(10, 2),
+    max_total_fare DECIMAL(10, 2),
     booking_count INT,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -34,8 +39,10 @@ CREATE TABLE kpi_seasonal_fare_variation (
     season VARCHAR(20),
     is_peak_season BOOLEAN,
     avg_fare DECIMAL(10, 2),
+    median_fare DECIMAL(10, 2),
     min_fare DECIMAL(10, 2),
     max_fare DECIMAL(10, 2),
+    std_dev_fare DECIMAL(10, 2),
     booking_count INT,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -47,9 +54,23 @@ CREATE TABLE kpi_popular_routes (
     destination VARCHAR(100),
     booking_count INT,
     avg_fare DECIMAL(10, 2),
+    min_fare DECIMAL(10, 2),
+    max_fare DECIMAL(10, 2),
+    route VARCHAR(250),
     route_rank INT,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(source, destination)
+);
+
+-- Table: kpi_booking_count_by_airline
+CREATE TABLE kpi_booking_count_by_airline (
+    id SERIAL PRIMARY KEY,
+    airline VARCHAR(100) UNIQUE,
+    total_bookings INT,
+    peak_season_bookings INT,
+    off_season_bookings INT,
+    market_share_percentage DECIMAL(5, 2),
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Table: pipeline_execution_log

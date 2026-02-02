@@ -218,17 +218,15 @@ class KPIComputer:
         """
         try:
             # Clear existing data
-            with self.postgres_engine.connect() as conn:
+            with self.postgres_engine.begin() as conn:
                 conn.execute(text(f"TRUNCATE TABLE {table_name} RESTART IDENTITY"))
-                conn.commit()
             
             # Save new data
             kpi_df.to_sql(
                 name=table_name,
                 con=self.postgres_engine,
                 if_exists='append',
-                index=False,
-                method='multi'
+                index=False
             )
             
             logger.info(f"Saved {len(kpi_df)} records to {table_name}")

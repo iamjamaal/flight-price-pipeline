@@ -101,23 +101,38 @@ class DataIngestion:
         """
         # Create mapping of possible column names to standard names
         column_mapping = {
+            # Standard format
             'Airline': 'airline',
             'Source': 'source',
             'Destination': 'destination',
             'Date_of_Journey': 'date_of_journey',
             'Dep_Time': 'departure_time',
             'Departure_Time': 'departure_time',
+            'Departure Date & Time': 'departure_time',
             'Arrival_Time': 'arrival_time',
+            'Arrival Date & Time': 'arrival_time',
             'Duration': 'duration',
+            'Duration (hrs)': 'duration',
             'Total_Stops': 'stops',
             'Stops': 'stops',
+            'Stopovers': 'stops',
             'Base Fare': 'base_fare',
             'Base_Fare': 'base_fare',
+            'Base Fare (BDT)': 'base_fare',
             'Tax & Surcharge': 'tax_surcharge',
             'Tax_Surcharge': 'tax_surcharge',
+            'Tax & Surcharge (BDT)': 'tax_surcharge',
             'Total Fare': 'total_fare',
             'Total_Fare': 'total_fare',
-            'Additional_Info': 'additional_info'
+            'Total Fare (BDT)': 'total_fare',
+            'Additional_Info': 'additional_info',
+            'Aircraft Type': 'aircraft_type',
+            'Class': 'class',
+            'Booking Source': 'booking_source',
+            'Seasonality': 'seasonality',
+            'Days Before Departure': 'days_before_departure',
+            'Source Name': 'source_name',
+            'Destination Name': 'destination_name'
         }
         
         # Rename columns
@@ -163,9 +178,8 @@ class DataIngestion:
     def truncate_staging_table(self):
         """Truncate staging table before fresh load"""
         try:
-            with self.mysql_engine.connect() as conn:
+            with self.mysql_engine.begin() as conn:
                 conn.execute(text("TRUNCATE TABLE staging_flights"))
-                conn.commit()
                 logger.info("Staging table truncated successfully")
         except Exception as e:
             logger.error(f"Error truncating table: {str(e)}")
@@ -186,13 +200,28 @@ class DataIngestion:
             initial_count = len(df)
             logger.info(f"Starting data load. Total records: {initial_count}")
             
+            # Select only columns that exist in the staging table
+            staging_columns = [
+                'airline', 'source', 'destination',
+                'base_fare', 'tax_surcharge', 'total_fare',
+                'date_of_journey', 'departure_time', 'arrival_time',
+                'duration', 'stops'
+            ]
+            
+            # Only include columns that exist in the dataframe
+            available_columns = [col for col in staging_columns if col in df.columns]
+            df_to_load = df[available_columns].copy()
+            
+            logger.info(f"Loading columns: {available_columns}")
+            logger.info(f"Sample data shape: {df_to_load.shape}")
+            
             # Load data in batches
             batch_size = pipeline_config.BATCH_SIZE
             rows_inserted = 0
             rows_failed = 0
             
-            for i in range(0, len(df), batch_size):
-                batch_df = df.iloc[i:i+batch_size]
+            for i in range(0, len(df_to_load), batch_size):
+                batch_df = df_to_load.iloc[i:i+batch_size]
                 
                 try:
                     batch_df.to_sql(
@@ -220,13 +249,12 @@ class DataIngestion:
     def log_ingestion_audit(self, records_processed: int, records_failed: int):
         """Log ingestion audit information"""
         try:
-            with self.mysql_engine.connect() as conn:
+            with self.mysql_engine.begin() as conn:
                 audit_query = text("""
                     INSERT INTO audit_log (table_name, operation, records_affected, executed_by)
                     VALUES ('staging_flights', 'INGESTION', :records, 'airflow_pipeline')
                 """)
                 conn.execute(audit_query, {'records': records_processed})
-                conn.commit()
                 
                 logger.info("Audit log updated successfully")
         except Exception as e:

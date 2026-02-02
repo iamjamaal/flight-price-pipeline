@@ -103,7 +103,7 @@ def log_pipeline_execution(**context):
     postgres_engine = create_engine(db_config.postgres_connection_string)
     
     try:
-        with postgres_engine.connect() as conn:
+        with postgres_engine.begin() as conn:
             # Log pipeline execution
             log_query = text("""
                 INSERT INTO pipeline_execution_log 
@@ -113,7 +113,17 @@ def log_pipeline_execution(**context):
                  CAST(:exec_time AS INTERVAL))
             """)
             
-            execution_date = context['execution_date']
+            # Convert execution_date from Proxy to datetime
+            # Use data_interval_start which is more reliable
+            from datetime import datetime
+            execution_date_raw = context.get('data_interval_start') or context.get('logical_date')
+            # Convert pendulum DateTime to Python datetime if needed
+            if hasattr(execution_date_raw, 'to_datetime_string'):
+                execution_date = datetime.fromisoformat(execution_date_raw.to_datetime_string())
+            elif hasattr(execution_date_raw, '__wrapped__'):
+                execution_date = execution_date_raw.__wrapped__
+            else:
+                execution_date = execution_date_raw
             
             # Log ingestion
             if ingestion_result:
@@ -159,7 +169,6 @@ def log_pipeline_execution(**context):
                     'exec_time': '2 minutes'
                 })
             
-            conn.commit()
             logger.info("Pipeline execution logged successfully")
     
     finally:

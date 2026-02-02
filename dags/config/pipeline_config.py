@@ -60,8 +60,8 @@ class PipelineConfig:
         """Initialize complex default values"""
         if self.REQUIRED_COLUMNS is None:
             self.REQUIRED_COLUMNS = [
-                'Airline', 'Source', 'Destination', 
-                'Base Fare', 'Tax & Surcharge', 'Total Fare'
+                'airline', 'source', 'destination', 
+                'base_fare', 'tax_surcharge', 'total_fare'
             ]
         
         if self.PEAK_SEASONS is None:

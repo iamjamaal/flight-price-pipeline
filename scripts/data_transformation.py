@@ -238,10 +238,17 @@ class DataTransformer:
             available_columns = [col for col in columns_to_save if col in df.columns]
             df_to_save = df[available_columns].copy()
             
+            # Convert time columns from bigint (microseconds) to TIME format
+            for time_col in ['departure_time', 'arrival_time']:
+                if time_col in df_to_save.columns:
+                    # Convert microseconds to timedelta then to time
+                    df_to_save[time_col] = pd.to_timedelta(df_to_save[time_col], unit='us').apply(
+                        lambda x: (pd.Timestamp('1970-01-01') + x).time() if pd.notna(x) else None
+                    )
+            
             # Clear existing data
-            with self.postgres_engine.connect() as conn:
+            with self.postgres_engine.begin() as conn:
                 conn.execute(text(f"TRUNCATE TABLE {table_name} RESTART IDENTITY CASCADE"))
-                conn.commit()
                 logger.info(f"Truncated {table_name} table")
             
             # Save data in batches
@@ -249,13 +256,12 @@ class DataTransformer:
             total_saved = 0
             
             for i in range(0, len(df_to_save), batch_size):
-                batch_df = df_to_save.iloc[i:i+batch_size]
+                batch_df = df_to_save.iloc[i:i+batch_size].copy()
                 batch_df.to_sql(
                     name=table_name,
                     con=self.postgres_engine,
                     if_exists='append',
-                    index=False,
-                    method='multi'
+                    index=False
                 )
                 total_saved += len(batch_df)
                 logger.info(f"Saved batch {i//batch_size + 1}: {len(batch_df)} records")
