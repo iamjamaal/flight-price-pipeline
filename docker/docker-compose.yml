@@ -1,6 +1,9 @@
 x-airflow-common:
   &airflow-common
-  image: apache/airflow:2.8.0-python3.11
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: flight-price-pipeline-airflow:latest
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -9,7 +12,6 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-pandas sqlalchemy pymysql psycopg2-binary}
   volumes:
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
@@ -21,6 +23,8 @@ x-airflow-common:
     &airflow-common-depends-on
     postgres-airflow:
       condition: service_healthy
+
+
 
 services:
   # MySQL - Staging Database
@@ -43,6 +47,10 @@ services:
       timeout: 5s
       retries: 5
 
+
+
+
+
   # PostgreSQL - Analytics Database
   postgres-analytics:
     image: postgres:15
@@ -62,6 +70,7 @@ services:
       timeout: 5s
       retries: 5
 
+
   # PostgreSQL - Airflow Metadata Database
   postgres-airflow:
     image: postgres:15
@@ -76,6 +85,7 @@ services:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 5s
       retries: 5
+
 
   # Airflow Webserver
   airflow-webserver:
@@ -93,6 +103,7 @@ services:
     depends_on:
       <<: *airflow-common-depends-on
 
+
   # Airflow Scheduler
   airflow-scheduler:
     <<: *airflow-common
@@ -106,6 +117,8 @@ services:
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
+
+
 
   # Airflow Init
   airflow-init:

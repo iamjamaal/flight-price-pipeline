@@ -19,6 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+
 class DataIngestionError(Exception):
     """Custom exception for data ingestion errors"""
     pass
@@ -73,10 +74,23 @@ class DataIngestion:
         try:
             logger.info(f"Reading CSV file: {file_path}")
             
+            # First, check what columns exist
+            sample_df = pd.read_csv(file_path, nrows=1)
+            date_columns = []
+            
+            # Check for various date column formats
+            if 'Date_of_Journey' in sample_df.columns:
+                date_columns.append('Date_of_Journey')
+            if 'Departure Date & Time' in sample_df.columns:
+                date_columns.append('Departure Date & Time')
+            if 'Arrival Date & Time' in sample_df.columns:
+                date_columns.append('Arrival Date & Time')
+            
+            # Read CSV with date parsing
             df = pd.read_csv(
                 file_path,
                 encoding='utf-8',
-                parse_dates=['Date_of_Journey'] if 'Date_of_Journey' in pd.read_csv(file_path, nrows=1).columns else [],
+                parse_dates=date_columns,
                 low_memory=False
             )
             
@@ -157,9 +171,25 @@ class DataIngestion:
             string_columns = df.select_dtypes(include=['object']).columns
             df[string_columns] = df[string_columns].apply(lambda x: x.str.strip())
             
+            # Extract date from departure_time if it contains datetime
+            # This handles cases where 'Departure Date & Time' was mapped to 'departure_time'
+            if 'departure_time' in df.columns and 'date_of_journey' not in df.columns:
+                # If departure_time is a datetime object, extract the date
+                if pd.api.types.is_datetime64_any_dtype(df['departure_time']):
+                    df['date_of_journey'] = df['departure_time'].dt.date
+                    logger.info("Extracted date_of_journey from departure_time")
+            
             # Handle date columns
             if 'date_of_journey' in df.columns:
                 df['date_of_journey'] = pd.to_datetime(df['date_of_journey'], errors='coerce')
+                logger.info(f"Parsed date_of_journey. Sample: {df['date_of_journey'].head(3).tolist()}")
+            
+            # Handle departure and arrival times
+            for time_col in ['departure_time', 'arrival_time']:
+                if time_col in df.columns:
+                    # If it's a datetime, extract just the time portion
+                    if pd.api.types.is_datetime64_any_dtype(df[time_col]):
+                        df[time_col] = df[time_col].dt.time
             
             # Convert fare columns to numeric
             fare_columns = ['base_fare', 'tax_surcharge', 'total_fare']
