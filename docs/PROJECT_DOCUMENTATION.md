@@ -2,8 +2,6 @@
 
 **Project**: Flight Price Data Analytics Pipeline  
 **Technology Stack**: Apache Airflow, MySQL, PostgreSQL, Docker, Python  
-**Date**: February 2, 2026  
-**Team**: Data Engineering Team
 
 ---
 
@@ -34,8 +32,6 @@ The Flight Price Pipeline is an enterprise-grade ETL (Extract, Transform, Load) 
 - ✅ **Zero Downtime**: Dockerized infrastructure with health monitoring
 - ✅ **Data Quality**: 100% completeness across all critical fields
 - ✅ **Real-time Monitoring**: 9 monitoring views with 15-minute health checks
-- ✅ **Incremental Loading**: 77% faster execution (9min → 2min) with change data capture
-- ✅ **Version Tracking**: Full audit trail with historical price change tracking
 
 ### Technical Highlights
 - **Dual Database Architecture**: MySQL staging + PostgreSQL analytics
@@ -292,27 +288,21 @@ Schedule: @daily
 Start Date: 2024-01-01
 Catchup: False
 Max Active Runs: 1
-Tags: ['flight_price', 'analytics', 'etl'] (supports incremental/full refresh)
-- **Module**: [scripts/data_ingestion.py](../scripts/data_ingestion.py)
-- **Duration**: ~2-3 minutes (full) / ~30 seconds (incremental)
-- **Dependencies**: `start_pipeline`
-- **Key Operations**:
-  - Validate CSV file existence and readability
-  - Read CSV with pandas (parse dates)
-  - Standardize column names
-  - Clean data (strip whitespace, convert types)
-  - **Incremental Mode** (Mon-Sat):
-    - Generate MD5 hash for each record
-    - Compare with existing hashes
-    - INSERT only new records
-    - Mark removed records as inactive (soft delete)
-  - **Full Refresh Mode** (Sunday):
-    - Truncate staging table
-    - Batch insert all records (1,000 records/batch)
-  - Log audit information
-- **Outputs**: 
-  - XCom: `{'status': 'SUCCESS', 'load_mode': 'INCREMENTAL', 'rows_inserted': 5700, 'rows_unchanged': 51300, 'rows_failed': 0}`
-  - MySQL: `staging_flights` table populated with tracking columns
+Tags: ['flight_price', 'analytics', 'etl']
+Timeout: 2 hours
+```
+
+**Default Arguments**:
+```python
+Owner: data-engineering-team
+Depends on Past: False
+Email on Failure: True
+Email on Retry: False
+Retries: 3
+Retry Delay: 5 minutes
+```
+
+### 4.2 Task Descriptions
 
 #### Task 1: `start_pipeline`
 - **Type**: BashOperator
@@ -1004,7 +994,7 @@ def get_pipeline_health_status() -> Dict:
     """
 ```
 
-**Current Health**: ✅ HEALTHY (all metrics green)
+**Current Health**: HEALTHY (all metrics green)
 
 ---
 
@@ -1278,26 +1268,7 @@ for col in fare_columns:
 - Connections: Pooled (max 5)
 
 ### 9.4 Resource Utilization
-,
-    -- Incremental Loading Columns (Added 2026-02-02)
-    record_hash VARCHAR(64) COMMENT 'MD5 hash for change detection',
-    source_file VARCHAR(255) COMMENT 'Source CSV filename',
-    ingestion_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When record was ingested',
-    is_active BOOLEAN DEFAULT TRUE COMMENT 'Soft delete flag',
-    INDEX idx_record_hash (record_hash),
-    INDEX idx_is_active (is_active),
-    INDEX idx_ingestion_timestamp (ingestion_timestamp)
-);
-```
 
-**Table: pipeline_watermarks** *(New)*
-```sql
-CREATE TABLE pipeline_watermarks (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    table_name VARCHAR(100) NOT NULL UNIQUE,
-    last_processed_timestamp TIMESTAMP NOT NULL,
-    last_processed_record_count INT DEFAULT 0,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 **Docker Containers**:
 - Total Memory: ~2.5 GB
 - CPU Usage: 10-30% during pipeline execution
@@ -1544,84 +1515,19 @@ Password: admin
 ```
 
 ---
-
-## Appendix C: File Structure
-
-```
-flight-price-pipeline/
-├── dags/
-│   ├── flight_price_pipeline_dag.py      # Main DAG
-│   ├── monitoring_dashboard_dag.py       # Monitoring DAG
-│   └── config/
-│       └── pipeline_config.py            # Configuration
-│
-├── scripts/
-│   ├── data_ingestion.py                 # CSV → MySQL
-│   ├── data_validation.py                # Quality checks
-│   ├── data_transformation.py            # MySQL → PostgreSQL
-│   ├── kpi_computation.py                # KPI calculations
-│   └── monitoring.py                     # Health monitoring
-│
-├── init-scripts/
-│   ├── mysql/
-│   │   └── 01_create_tables.sql          # MySQL schema
-│   ├── postgres/
-│   │   ├── 01_create_tables.sql          # PostgreSQL schema
-│   │   └── 02_monitoring_views.sql       # 9 monitoring views
-│
-├── data/
-│   ├── raw/
-│   │   └── Flight_Price_Dataset_of_Bangladesh.csv
-│   └── processed/
-│
-├── tests/
-│   ├── test_data_ingestion.py
-│   ├── test_monitoring.py
-│   └── test_pipeline_integration.py
-│
-├── docs/
-│   ├── PROJECT_DOCUMENTATION.md          # This file
-│   ├── MONITORING_GUIDE.md
-│   └── WALKTHROUGH.md
-│
-├── docker-compose.yml                     # Container orchestration
-├── requirements.txt                       # Python dependencies
-└── README.md                             # Project overview
-```
-
----
-
-## Appendix D: Key Technologies
-
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Apache Airflow | 2.8.0 | Workflow orchestration |
-| MySQL | 8.0 | Staging database |
-| PostgreSQL | 15 | Analytics database |
-| Python | 3.11 | Pipeline scripts |
-| Pandas | 2.1.4 | Data manipulation |
-| SQLAlchemy | 2.0.23 | Database ORM |
-| Docker | 24.0 | Containerization |
-| Docker Compose | 2.23 | Multi-container orchestration |
-
 ---
 
 ## Conclusion
 
 The Flight Price Pipeline successfully demonstrates enterprise-grade data engineering practices:
 
-✅ **Robust ETL Architecture**: Dual-database design with clear staging and analytics separation  
-✅ **High Data Quality**: 100% validation success with comprehensive quality checks  
-✅ **Performance Optimized**: Batch processing, connection pooling, transaction safety  
-✅ **Production Ready**: Monitoring, alerting, health checks, error handling  
-✅ **Well Documented**: Comprehensive documentation, code comments, inline help  
-✅ **Maintainable**: Modular design, configuration-driven, Docker containerized  
+ **Robust ETL Architecture**: Dual-database design with clear staging and analytics separation  
+ **High Data Quality**: 100% validation success with comprehensive quality checks  
+ **Performance Optimized**: Batch processing, connection pooling, transaction safety  
+ **Production Ready**: Monitoring, alerting, health checks, error handling  
+ **Well Documented**: Comprehensive documentation, code comments, inline help  
+ **Maintainable**: Modular design, configuration-driven, Docker containerized  
 
 The pipeline processes 57,000 flight records daily with 100% success rate, generating actionable business insights through 4 KPI tables and 9 monitoring views, all orchestrated by Apache Airflow with automated health monitoring every 15 minutes.
 
 ---
-
-**Document Version**: 1.0  
-**Last Updated**: February 2, 2026  
-**Maintained By**: Data Engineering Team  
-**Contact**: [Your Contact Information]
