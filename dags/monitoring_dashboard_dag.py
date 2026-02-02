@@ -166,16 +166,16 @@ def send_alerts_if_needed(**context):
             message='Pipeline health check FAILED - immediate attention required',
             severity='ERROR'
         )
-        print("🔴 CRITICAL ALERT SENT: Pipeline is UNHEALTHY")
+        print("CRITICAL ALERT SENT: Pipeline is UNHEALTHY")
     elif health_status == 'WARNING':
         monitor.send_alert(
             alert_type='PIPELINE_HEALTH',
             message='Pipeline health check shows WARNING status',
             severity='WARNING'
         )
-        print("🟡 WARNING ALERT SENT: Pipeline has warnings")
+        print("WARNING ALERT SENT: Pipeline has warnings")
     else:
-        print("✅ No alerts needed - Pipeline is HEALTHY")
+        print("No alerts needed - Pipeline is HEALTHY")
 
 
 # Define tasks

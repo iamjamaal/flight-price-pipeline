@@ -1,12 +1,15 @@
 # Incremental Loading Implementation Guide
 
 ## Overview
+
 Your pipeline now supports **incremental loading** - a more efficient approach than full refresh that only processes new or changed records.
 
 ## What Was Implemented
 
 ### 1. Database Migrations
+
 ✅ **MySQL Staging** ([init-scripts/mysql/02_add_incremental_columns.sql](../init-scripts/mysql/02_add_incremental_columns.sql))
+
 - Added `record_hash` column for change detection
 - Added `source_file` to track CSV origin
 - Added `ingestion_timestamp` for temporal tracking
@@ -14,6 +17,7 @@ Your pipeline now supports **incremental loading** - a more efficient approach t
 - Created `pipeline_watermarks` table for tracking last processed time
 
 ✅ **PostgreSQL Analytics** ([init-scripts/postgres/03_add_incremental_columns.sql](../init-scripts/postgres/03_add_incremental_columns.sql))
+
 - Added `record_hash`, `first_seen_date`, `last_updated_date`
 - Added `version_number` to track record updates
 - Added `is_active` for soft deletes
@@ -22,7 +26,9 @@ Your pipeline now supports **incremental loading** - a more efficient approach t
 - Created 2 new monitoring views for incremental stats
 
 ### 2. Configuration Updates
+
 ✅ **Pipeline Config** ([dags/config/pipeline_config.py](../dags/config/pipeline_config.py))
+
 ```python
 USE_INCREMENTAL_LOAD: bool = True           # Enable incremental mode
 FULL_REFRESH_DAY: int = 0                   # Sunday = full refresh
@@ -33,6 +39,7 @@ ENABLE_HISTORY_TRACKING: bool = True        # Track changes over time
 ### 3. Code Changes
 
 ✅ **Data Ingestion** ([scripts/data_ingestion.py](../scripts/data_ingestion.py))
+
 - `generate_record_hash()` - Creates MD5/SHA256 hash for change detection
 - `get_existing_hashes()` - Retrieves existing records from database
 - `load_to_staging_incremental()` - Inserts new, marks deleted records inactive
@@ -40,12 +47,14 @@ ENABLE_HISTORY_TRACKING: bool = True        # Track changes over time
 - Updated `execute_ingestion()` - Supports both modes
 
 ✅ **Data Transformation** ([scripts/data_transformation.py](../scripts/data_transformation.py))
+
 - `load_staging_data_incremental()` - Loads only records since last run
 - `save_to_analytics_db_incremental()` - UPSERT using PostgreSQL ON CONFLICT
 - `generate_record_hash()` - Consistent hashing with ingestion
 - Updated `execute_transformation()` - Supports both modes
 
 ✅ **KPI Computation** ([scripts/kpi_computation.py](../scripts/kpi_computation.py))
+
 - Updated `load_analytics_data()` - Filters only active records for metrics
 
 ---
@@ -126,6 +135,7 @@ python scripts\setup_incremental_loading.py
 ```
 
 This will:
+
 - ✅ Add tracking columns to both databases
 - ✅ Create history and watermark tables
 - ✅ Verify table structures
@@ -171,6 +181,7 @@ docker exec airflow-webserver airflow dags trigger flight_price_pipeline
 **Check the logs for incremental mode:**
 
 Look for these messages in task logs:
+
 ```
 Using INCREMENTAL load
 Incremental load: 5700 new, 51300 unchanged, 0 deactivated
@@ -223,11 +234,13 @@ Run pipeline → Should see `2 new records inserted`
 ### Test 2: Simulate Price Changes
 
 Modify existing records (change fares):
+
 - Update 10 records with new prices
 - Run pipeline
 - Should see `0 inserted, 10 updated, version_number incremented`
 
 Check version history:
+
 ```sql
 SELECT airline, source, destination, total_fare, version_number 
 FROM flights_analytics 
@@ -238,10 +251,12 @@ ORDER BY version_number DESC LIMIT 10;
 ### Test 3: Simulate Deletions
 
 Remove 5 records from CSV:
+
 - Run pipeline
 - Should see `5 records deactivated`
 
 Verify soft deletes:
+
 ```sql
 SELECT COUNT(*) as inactive_records 
 FROM staging_flights 
@@ -268,16 +283,19 @@ python /opt/airflow/scripts/data_ingestion.py
 ### New Monitoring Views
 
 **1. Incremental Load Statistics:**
+
 ```sql
 SELECT * FROM vw_incremental_load_stats 
 ORDER BY load_date DESC LIMIT 30;
 ```
 
 Shows daily breakdown:
+
 - `total_inserted`, `total_updated`, `total_deleted`
 - `processing_mode` (INCREMENTAL vs FULL_REFRESH)
 
 **2. Record Change History:**
+
 ```sql
 SELECT * FROM vw_record_change_history 
 WHERE airline = 'Us-Bangla Airlines' 
@@ -285,6 +303,7 @@ ORDER BY valid_from DESC LIMIT 10;
 ```
 
 Shows fare changes over time:
+
 - Old fare vs new fare
 - Fare change amount
 - When change occurred
@@ -321,7 +340,8 @@ ORDER BY version_number;
 
 ## Performance Benefits
 
-### Before (Full Refresh):
+### Before (Full Refresh)
+
 ```
 Pipeline Execution: 9 minutes
 ├─ Ingestion:       2.5 min (57,000 INSERT)
@@ -331,9 +351,10 @@ Pipeline Execution: 9 minutes
 └─ Logging:         1.0 min
 ```
 
-### After (Incremental - 10% change rate):
+### After (Incremental - 10% change rate)
+
 ```
-Pipeline Execution: 2 minutes ⚡ (77% faster)
+└─ Logging:         0.2 min
 ├─ Ingestion:       0.5 min (5,700 INSERT)
 ├─ Validation:      0.3 min
 ├─ Transformation:  0.5 min (5,700 UPSERT)
@@ -341,7 +362,8 @@ Pipeline Execution: 2 minutes ⚡ (77% faster)
 └─ Logging:         0.2 min
 ```
 
-### Resource Savings:
+### Resource Savings
+
 - **Database I/O**: 90% reduction
 - **Network bandwidth**: 85% reduction
 - **CPU usage**: 70% reduction
@@ -355,6 +377,7 @@ Pipeline Execution: 2 minutes ⚡ (77% faster)
 ### Issue: "Column 'record_hash' doesn't exist"
 
 **Solution:** Migrations not applied
+
 ```powershell
 python scripts\setup_incremental_loading.py
 ```
@@ -362,12 +385,14 @@ python scripts\setup_incremental_loading.py
 ### Issue: All records showing as "new" every run
 
 **Solution:** Hash generation inconsistency
+
 - Check that hash includes same fields in ingestion and transformation
 - Verify datetime formatting is consistent
 
 ### Issue: UPSERT failing with constraint violation
 
 **Solution:** Missing unique constraint
+
 ```sql
 ALTER TABLE flights_analytics
 ADD CONSTRAINT unique_flight_record 
@@ -377,6 +402,7 @@ UNIQUE (airline, source, destination, date_of_journey, departure_time);
 ### Issue: Performance not improving
 
 **Solution:** Check if actually using incremental mode
+
 ```powershell
 # Check logs for "Using INCREMENTAL load" message
 docker logs airflow-scheduler | grep -i "incremental"
@@ -444,18 +470,21 @@ ORDER BY valid_from DESC;
 If you need to revert to full refresh mode:
 
 **Option 1: Configuration Change (Recommended)**
+
 ```python
 # In pipeline_config.py
 USE_INCREMENTAL_LOAD: bool = False
 ```
 
 **Option 2: Environment Variable**
+
 ```powershell
 # In docker-compose.yml or .env
 USE_INCREMENTAL_LOAD=false
 ```
 
 **Option 3: Emergency Full Refresh**
+
 ```powershell
 # Truncate and reload everything
 docker exec airflow-webserver bash -c "
@@ -482,6 +511,7 @@ python /opt/airflow/scripts/kpi_computation.py
 ## Summary
 
 You now have a production-ready incremental loading system that:
+
 - ✅ Processes only changed data (10-20% typically)
 - ✅ Reduces pipeline time by 77% (9min → 2min)
 - ✅ Tracks version history for audit compliance

@@ -23,9 +23,11 @@
 ## 1. Executive Summary
 
 ### Project Overview
+
 The Flight Price Pipeline is an enterprise-grade ETL (Extract, Transform, Load) system designed to process, validate, transform, and analyze flight pricing data from Bangladesh's aviation market. The pipeline processes 57,000+ flight records daily, generating actionable business intelligence through automated KPI computation.
 
 ### Key Achievements
+
 - ✅ **100% Data Success Rate**: All pipeline tasks achieve 100% execution success
 - ✅ **57,000 Records Processed**: Complete dataset transformation from CSV to analytics-ready format
 - ✅ **4 KPI Tables**: Automated computation of business metrics
@@ -34,6 +36,7 @@ The Flight Price Pipeline is an enterprise-grade ETL (Extract, Transform, Load) 
 - ✅ **Real-time Monitoring**: 9 monitoring views with 15-minute health checks
 
 ### Technical Highlights
+
 - **Dual Database Architecture**: MySQL staging + PostgreSQL analytics
 - **Incremental Loading**: Change Data Capture (CDC) with MD5 hashing for efficiency
 - **Batch Processing**: 1,000 records per batch for optimal performance
@@ -132,7 +135,7 @@ The Flight Price Pipeline is an enterprise-grade ETL (Extract, Transform, Load) 
    - Task execution history
    - Log viewer
 
-2. **airflow-scheduler** 
+2. **airflow-scheduler**
    - DAG scheduling and execution
    - Task dependency management
    - Retry logic handling
@@ -163,6 +166,7 @@ Audit   Staging      Quality Log    flights_analytics    4 KPI     9 Views
 
 ---
 **Full Refresh Mode (Sunday):**
+
 ```
 Start (00:00:00)
   ├─► Data Ingestion (00:00:00 - 00:02:30)
@@ -189,6 +193,7 @@ Total Duration: ~9 minutes
 ```
 
 **Incremental Mode (Monday-Saturday):**
+
 ```
 Start (00:00:00)
   ├─► Data Ingestion (00:00:00 - 00:00:30)
@@ -257,17 +262,20 @@ Total Duration: ~9 minutes
 
 ### 3.3 Execution Modes
 
-**Daily Scheduled Run**: 
+**Daily Scheduled Run**:
+
 - Trigger: `@daily` (00:00 UTC)
 - Catchup: Disabled (only runs for current day)
 - Max Active Runs: 1 (prevents concurrent executions)
 
 **Manual Trigger**:
+
 - Via Airflow UI
 - CLI: `airflow dags trigger flight_price_pipeline`
 - API: REST endpoint
 
 **Retry Strategy**:
+
 - Max Retries: 3
 - Retry Delay: 5 minutes
 - Exponential backoff: No
@@ -282,6 +290,7 @@ Total Duration: ~9 minutes
 **File**: [dags/flight_price_pipeline_dag.py](../dags/flight_price_pipeline_dag.py)
 
 **Configuration**:
+
 ```python
 DAG ID: flight_price_pipeline
 Schedule: @daily
@@ -293,6 +302,7 @@ Timeout: 2 hours
 ```
 
 **Default Arguments**:
+
 ```python
 Owner: data-engineering-team
 Depends on Past: False
@@ -305,6 +315,7 @@ Retry Delay: 5 minutes
 ### 4.2 Task Descriptions
 
 #### Task 1: `start_pipeline`
+
 - **Type**: BashOperator
 - **Command**: `echo "Starting Flight Price Pipeline..."`
 - **Purpose**: Pipeline initialization marker
@@ -313,6 +324,7 @@ Retry Delay: 5 minutes
 - **Outputs**: XCom metadata
 
 #### Task 2: `data_ingestion`
+
 - **Type**: PythonOperator
 - **Function**: `run_data_ingestion()`
 - **Purpose**: Extract CSV data and load into MySQL staging
@@ -350,10 +362,10 @@ Retry Delay: 5 minutes
 - **Outputs**:
   - XCom: `{'status': 'SUCCESS', 'load_mode': 'INCREMENTAL', 'records_inserted': 1200, 'records_updated': 4500}`
   - PostgreSQL: `flights_analytics` table populated with versioning
-  3. **Fare Logic**: total_fare = base_fare + tax_surcharge
-  4. **City Whitelist**: Valid airport codes only
-  5. **Date Validation**: No future dates, no nulls
-  6. **Route Validation**: source ≠ destination
+  1. **Fare Logic**: total_fare = base_fare + tax_surcharge
+  2. **City Whitelist**: Valid airport codes only
+  3. **Date Validation**: No future dates, no nulls
+  4. **Route Validation**: source ≠ destination
 - **Thresholds**:
   - Critical: >5% of records fail
   - Warning: 1-5% of records fail
@@ -363,6 +375,7 @@ Retry Delay: 5 minutes
   - MySQL: `data_quality_log` table updated
 
 #### Task 4: `data_transformation`
+
 - **Type**: PythonOperator
 - **Function**: `run_data_transformation()`
 - **Purpose**: Enrich data and transfer to PostgreSQL
@@ -386,6 +399,7 @@ Retry Delay: 5 minutes
   - PostgreSQL: `flights_analytics` table populated
 
 #### Task 5: `kpi_computation`
+
 - **Type**: PythonOperator
 - **Function**: `run_kpi_computation()`
 - **Purpose**: Calculate business metrics
@@ -397,6 +411,7 @@ Retry Delay: 5 minutes
   - PostgreSQL: 4 KPI tables populated (see Section 5)
 
 #### Task 6: `log_pipeline_execution`
+
 - **Type**: PythonOperator
 - **Function**: `log_pipeline_execution()`
 - **Purpose**: Record pipeline execution metadata
@@ -412,6 +427,7 @@ Retry Delay: 5 minutes
   - PostgreSQL: `pipeline_execution_log` table updated
 
 #### Task 7: `monitor_health`
+
 - **Type**: PythonOperator
 - **Function**: `run_health_check()`
 - **Purpose**: Verify pipeline health post-execution
@@ -428,6 +444,7 @@ Retry Delay: 5 minutes
   - Alerts if issues detected
 
 #### Task 8: `end_pipeline`
+
 - **Type**: BashOperator
 - **Command**: `echo "Flight Price Pipeline completed successfully!"`
 - **Purpose**: Pipeline completion marker
@@ -442,6 +459,7 @@ Retry Delay: 5 minutes
 **Purpose**: Continuous health monitoring
 
 **Tasks**:
+
 1. `check_health` - Database connectivity, table existence
 2. `collect_performance_metrics` - Task success rates, durations
 3. `assess_data_quality` - Completeness, anomalies
@@ -460,6 +478,7 @@ Retry Delay: 5 minutes
 **Purpose**: Analyze pricing strategies and competitiveness across airlines
 
 **Computation Logic**:
+
 ```python
 GROUP BY airline
 AGGREGATE:
@@ -474,6 +493,7 @@ AGGREGATE:
 ```
 
 **Schema**:
+
 ```sql
 CREATE TABLE kpi_average_fare_by_airline (
     id SERIAL PRIMARY KEY,
@@ -490,6 +510,7 @@ CREATE TABLE kpi_average_fare_by_airline (
 ```
 
 **Sample Results**:
+
 | Airline | Avg Total Fare | Min Fare | Max Fare | Bookings |
 |---------|----------------|----------|----------|----------|
 | Us-Bangla Airlines | ₹14,234 | ₹5,800 | ₹28,500 | 4,496 |
@@ -497,6 +518,7 @@ CREATE TABLE kpi_average_fare_by_airline (
 | Novoair | ₹13,567 | ₹5,500 | ₹26,800 | 3,891 |
 
 **Business Insights**:
+
 - Identify price leaders vs. budget carriers
 - Fare range analysis for market positioning
 - Booking volume correlation with pricing
@@ -510,6 +532,7 @@ CREATE TABLE kpi_average_fare_by_airline (
 **Purpose**: Understand demand patterns and dynamic pricing across seasons
 
 **Computation Logic**:
+
 ```python
 GROUP BY season, is_peak_season
 AGGREGATE:
@@ -522,6 +545,7 @@ AGGREGATE:
 ```
 
 **Schema**:
+
 ```sql
 CREATE TABLE kpi_seasonal_fare_variation (
     id SERIAL PRIMARY KEY,
@@ -537,6 +561,7 @@ CREATE TABLE kpi_seasonal_fare_variation (
 ```
 
 **Sample Results**:
+
 | Season | Peak | Avg Fare | Median Fare | Bookings |
 |--------|------|----------|-------------|----------|
 | Winter | Yes | ₹81,013 | ₹78,500 | 18,234 |
@@ -545,6 +570,7 @@ CREATE TABLE kpi_seasonal_fare_variation (
 | Autumn | No | ₹37,845 | ₹36,200 | 12,420 |
 
 **Business Insights**:
+
 - Peak season premium pricing (130% markup)
 - Demand forecasting for capacity planning
 - Revenue optimization opportunities
@@ -558,6 +584,7 @@ CREATE TABLE kpi_seasonal_fare_variation (
 **Purpose**: Identify high-traffic routes for network optimization
 
 **Computation Logic**:
+
 ```python
 GROUP BY source, destination
 AGGREGATE:
@@ -572,6 +599,7 @@ LIMIT 20
 ```
 
 **Schema**:
+
 ```sql
 CREATE TABLE kpi_popular_routes (
     id SERIAL PRIMARY KEY,
@@ -587,6 +615,7 @@ CREATE TABLE kpi_popular_routes (
 ```
 
 **Sample Results** (Top 5):
+
 | Rank | Route | Bookings | Avg Fare |
 |------|-------|----------|----------|
 | 1 | Rjh -> Sin | 417 | ₹42,350 |
@@ -596,6 +625,7 @@ CREATE TABLE kpi_popular_routes (
 | 5 | Syl -> Dhk | 332 | ₹27,200 |
 
 **Business Insights**:
+
 - Route profitability analysis
 - Fleet allocation optimization
 - New route feasibility studies
@@ -610,6 +640,7 @@ CREATE TABLE kpi_popular_routes (
 **Purpose**: Market share analysis and competitive intelligence
 
 **Computation Logic**:
+
 ```python
 total_bookings = COUNT(*) GROUP BY airline
 peak_season_bookings = COUNT(*) WHERE is_peak_season=True GROUP BY airline
@@ -619,6 +650,7 @@ market_share_percentage = (total_bookings / TOTAL_MARKET) * 100
 ```
 
 **Schema**:
+
 ```sql
 CREATE TABLE kpi_booking_count_by_airline (
     id SERIAL PRIMARY KEY,
@@ -631,6 +663,7 @@ CREATE TABLE kpi_booking_count_by_airline (
 ```
 
 **Sample Results**:
+
 | Airline | Total Bookings | Peak | Off-Peak | Market Share |
 |---------|----------------|------|----------|--------------|
 | Us-Bangla Airlines | 4,496 | 2,234 | 2,262 | 7.89% |
@@ -638,6 +671,7 @@ CREATE TABLE kpi_booking_count_by_airline (
 | Novoair | 3,891 | 1,456 | 2,435 | 6.83% |
 
 **Business Insights**:
+
 - Market leader identification
 - Seasonal demand patterns per airline
 - Competitive benchmarking
@@ -654,6 +688,7 @@ CREATE TABLE kpi_booking_count_by_airline (
 **6 Validation Checks**:
 
 #### Check 1: Negative Fare Detection
+
 ```python
 def validate_negative_fares(df: pd.DataFrame) -> Dict:
     """Check for negative base_fare, tax_surcharge, total_fare"""
@@ -671,9 +706,11 @@ def validate_negative_fares(df: pd.DataFrame) -> Dict:
         'severity': severity
     }
 ```
+
 **Result**: 0 negative fares detected ✓
 
 #### Check 2: Zero Fare Detection
+
 ```python
 def validate_zero_fares(df: pd.DataFrame) -> Dict:
     """Check for zero-value fares (data errors)"""
@@ -682,9 +719,11 @@ def validate_zero_fares(df: pd.DataFrame) -> Dict:
         (df['total_fare'] == 0)
     ]
 ```
+
 **Result**: 0 zero fares detected ✓
 
 #### Check 3: Fare Logic Validation
+
 ```python
 def validate_fare_calculation(df: pd.DataFrame) -> Dict:
     """Verify total_fare = base_fare + tax_surcharge"""
@@ -695,9 +734,11 @@ def validate_fare_calculation(df: pd.DataFrame) -> Dict:
         (df['total_fare'] - df['calculated_total']).abs() > tolerance
     ]
 ```
+
 **Result**: All fares calculated correctly ✓
 
 #### Check 4: City Whitelist Validation
+
 ```python
 def validate_cities(df: pd.DataFrame) -> Dict:
     """Validate against Bangladeshi airport codes"""
@@ -706,9 +747,11 @@ def validate_cities(df: pd.DataFrame) -> Dict:
     invalid_source = ~df['source'].isin(valid_cities)
     invalid_destination = ~df['destination'].isin(valid_cities)
 ```
+
 **Result**: All cities valid ✓
 
 #### Check 5: Date Validation
+
 ```python
 def validate_dates(df: pd.DataFrame) -> Dict:
     """Check for future dates and nulls"""
@@ -717,14 +760,17 @@ def validate_dates(df: pd.DataFrame) -> Dict:
     future_dates = df[df['date_of_journey'] > today]
     null_dates = df[df['date_of_journey'].isna()]
 ```
+
 **Result**: All dates valid and complete ✓
 
 #### Check 6: Route Validation
+
 ```python
 def validate_routes(df: pd.DataFrame) -> Dict:
     """Ensure source ≠ destination"""
     invalid_routes = df[df['source'] == df['destination']]
 ```
+
 **Result**: No circular routes detected ✓
 
 ### 6.2 Data Quality Metrics
@@ -735,6 +781,7 @@ def validate_routes(df: pd.DataFrame) -> Dict:
 **Validity**: 100% (all values within expected ranges)
 
 **Quality Log Table**:
+
 ```sql
 CREATE TABLE data_quality_log (
     id SERIAL PRIMARY KEY,
@@ -757,6 +804,7 @@ CREATE TABLE data_quality_log (
 **Module**: [scripts/monitoring.py](../scripts/monitoring.py)
 
 **PipelineMonitor Class** provides:
+
 - Real-time health checks
 - Performance metrics
 - Data quality assessment
@@ -768,6 +816,7 @@ CREATE TABLE data_quality_log (
 **File**: [init-scripts/postgres/02_monitoring_views.sql](../init-scripts/postgres/02_monitoring_views.sql)
 
 #### View 1: `vw_pipeline_execution_summary`
+
 ```sql
 SELECT 
     dag_id,
@@ -779,9 +828,11 @@ SELECT
 FROM pipeline_execution_log
 GROUP BY dag_id, task_id;
 ```
+
 **Current Metrics**: 100% success rate across all tasks
 
 #### View 2: `vw_task_performance`
+
 ```sql
 SELECT 
     task_id,
@@ -792,9 +843,11 @@ FROM pipeline_execution_log
 WHERE status = 'SUCCESS'
 GROUP BY task_id;
 ```
+
 **Performance**: Avg 57,000 records processed in ~9 minutes
 
 #### View 3: `vw_data_quality_overview`
+
 ```sql
 SELECT 
     check_name,
@@ -804,9 +857,11 @@ SELECT
 FROM data_quality_log
 GROUP BY check_name;
 ```
+
 **Quality**: 0 records flagged across all checks
 
 #### View 4: `vw_top_routes_performance`
+
 ```sql
 SELECT 
     route,
@@ -818,6 +873,7 @@ ORDER BY route_rank;
 ```
 
 #### View 5: `vw_airline_performance`
+
 ```sql
 SELECT 
     airline,
@@ -830,6 +886,7 @@ ORDER BY market_share_percentage DESC;
 ```
 
 #### View 6: `vw_recent_pipeline_activity`
+
 ```sql
 SELECT 
     execution_date,
@@ -842,6 +899,7 @@ ORDER BY execution_date DESC;
 ```
 
 #### View 7: `vw_seasonal_patterns`
+
 ```sql
 SELECT 
     season,
@@ -854,6 +912,7 @@ FROM kpi_seasonal_fare_variation;
 ```
 
 #### View 8: `vw_data_completeness`
+
 ```sql
 SELECT 
     COUNT(*) as total_records,
@@ -863,9 +922,11 @@ SELECT
     ROUND(100.0 * COUNT(airline) / COUNT(*), 2) as completeness_pct
 FROM flights_analytics;
 ```
+
 **Completeness**: 100% across all fields
 
 #### View 9: `vw_potential_anomalies`
+
 ```sql
 SELECT 
     airline,
@@ -883,9 +944,11 @@ WHERE execution_date >= CURRENT_DATE - INTERVAL '30 days'
 GROUP BY DATE(execution_date), processing_mode
 ORDER BY load_date DESC;
 ```
+
 **Purpose**: Track incremental vs full refresh performance over time
 
 #### View 11: `vw_record_change_history`
+
 ```sql
 SELECT 
     airline,
@@ -898,7 +961,9 @@ SELECT
 
 **Error Message**:
 ```
+
 pymysql.err.ProgrammingError: (1064, "You have an error in your SQL syntax near ':last_run'")
+
 ```
 
 **Root Cause**: MySQL uses `%s` placeholders instead of `:param` named parameters. pandas.read_sql with MySQL requires different parameter binding.
@@ -911,6 +976,7 @@ pd.read_sql(query, mysql_engine, params={'last_run': date})
 ```
 
 **Solution**: Changed to string interpolation with proper datetime formatting
+
 ```python
 # MySQL compatible
 last_run_str = last_run.strftime('%Y-%m-%d %H:%M:%S')
@@ -931,6 +997,7 @@ df = pd.read_sql(query, self.mysql_engine)
 **Root Cause**: Database migration scripts weren't applied to the running containers. Tables lacked the new tracking columns.
 
 **Investigation**:
+
 ```sql
 -- Checked table structure
 DESCRIBE staging_flights;
@@ -938,6 +1005,7 @@ DESCRIBE staging_flights;
 ```
 
 **Solution**: 4pplied migrations manually to running containers
+
 ```sql
 -- MySQL
 ALTER TABLE staging_flights
@@ -956,13 +1024,15 @@ ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
 
 ---
 
-### Challenge 3: 
+### Challenge 3
+
     version_number,
     valid_from,
     valid_to,
     change_type
 FROM flights_analytics_history
 ORDER BY valid_from DESC;
+
 ```
 **Purpose**: Audit trail of all record changes (price updates, inserts, deletes)
 
@@ -1007,6 +1077,7 @@ def get_pipeline_health_status() -> Dict:
 **Root Cause**: Status mismatch - validation module returned 'WARNING' status, but monitoring views counted only 'SUCCESS' status.
 
 **Investigation**:
+
 ```sql
 SELECT DISTINCT status FROM pipeline_execution_log 
 WHERE task_id = 'data_validation';
@@ -1014,7 +1085,9 @@ WHERE task_id = 'data_validation';
 ```
 
 **Solution**:
+
 1. Updated [data_validation.py](../scripts/data_validation.py#L373) to return 'SUCCESS' instead of 'WARNING'
+
 ```python
 # Before
 overall_status = 'FAILED' if failed_checks else 'WARNING' if warning_checks else 'PASSED'
@@ -1023,8 +1096,9 @@ overall_status = 'FAILED' if failed_checks else 'WARNING' if warning_checks else
 overall_status = 'FAILED' if failed_checks else 'SUCCESS'
 ```
 
-2. Updated monitoring views to recognize both 'SUCCESS' and 'PASSED' statuses
-3. Fixed existing records:
+1. Updated monitoring views to recognize both 'SUCCESS' and 'PASSED' statuses
+2. Fixed existing records:
+
 ```sql
 UPDATE pipeline_execution_log 
 SET status = 'SUCCESS' 
@@ -1051,6 +1125,7 @@ SELECT route FROM kpi_popular_routes LIMIT 1;
 ```
 
 **Solution**: Changed arrow from Unicode to ASCII in [kpi_computation.py](../scripts/kpi_computation.py#L159)
+
 ```python
 # Before
 kpi_df['route'8 = kpi_df['source'] + ' → ' + kpi_df['destination']
@@ -1060,6 +1135,7 @@ kpi_df['route'] = kpi_df['source'] + ' -> ' + kpi_df['destination']
 ```
 
 Updated monitoring view:
+
 ```sql
 -- Before
 source || ' → ' || destination AS route
@@ -1077,6 +1153,7 @@ source || ' -> ' || destination AS route
 ### Challenge 3: PostgreSQL Connection Authentication Error
 
 **Problem**: User unable to connect to PostgreSQL using workbench with error:
+
 ```
 FATAL: password authentication failed for user "analytics_user"
 ```9
@@ -1090,6 +1167,7 @@ POSTGRES_PASSWORD: analytics_pass
 ```
 
 **Solution**: Provided correct connection details:
+
 - Host: localhost
 - Port: 5433
 - Database: analytics_db
@@ -1105,6 +1183,7 @@ POSTGRES_PASSWORD: analytics_pass
 ### Challenge 4: Docker Container Conflicts
 
 **Problem**: User encountered error when running `docker-compose up`:
+
 ```
 Error: Bind for 0.0.0.0:8080 failed: port is already allocated
 **Full Refresh Mode (Sunday)**:
@@ -1185,6 +1264,7 @@ for time_col in ['departure_time', 'arrival_time']:
 **Root Cause**: Large monolithic insert operations locked tables and consumed excessive memory.
 
 **Solution**: Implemented batch processing in all load operations
+
 ```python
 batch_size = 5000  # Optimal batch size
 for i in range(0, len(df), batch_size):
@@ -1192,19 +1272,20 @@ for i in range(0, len(df), batch_size):
     batch_df.to_sql(name=table_name, con=engine, if_exists='append')
 ```
 
-   - Alert on significant fare changes (>10%)
+- Alert on significant fare changes (>10%)
 
-2. **Data Lineage Tracking**
+1. **Data Lineage Tracking**
    - Implement metadata tracking for each record
    - Add source-to-destination traceability
    - Create data lineage visualization
    - Integrate with Apache Atlas or DataHub
 
-3. **Price Change Analytics** ✅ *Enabled by Incremental Loading*
+2. **Price Change Analytics** ✅ *Enabled by Incremental Loading*
    - Query historical price trends
    - Identify best booking windows
    - Alert on fare spikes or drops
    - Build price prediction models
+
 ### Challenge 7: Handling Dirty Data with errors='coerce'
 
 **Problem**: CSV file contained non-numeric values in fare columns, causing pipeline crashes.
@@ -1212,6 +1293,7 @@ for i in range(0, len(df), batch_size):
 **Root Cause**: Real-world data had entries like "N/A", "-", or empty strings in numeric columns.
 
 **Solution**: Used pandas `errors='coerce'` parameter in [data_ingestion.py](../scripts/data_ingestion.py#L206)
+
 ```python
 for col in fare_columns:
     if col in df.columns:
@@ -1219,7 +1301,8 @@ for col in fare_columns:
         # Converts invalid values to NaN instead of crashing
 ```
 
-**Outcome**: 
+**Outcome**:
+
 - Pipeline robustness improved
 - Invalid values converted to NaN for downstream handling
 - Validation layer catches and reports data quality issues
@@ -1257,11 +1340,13 @@ for col in fare_columns:
 ### 9.3 Database Performance
 
 **MySQL Staging**:
+
 - Insert Rate: 380 records/sec (batched)
 - Storage: ~12 MB for 57,000 records
 - Connections: Pooled (max 5)
 
 **PostgreSQL Analytics**:
+
 - Insert Rate: 380 records/sec (batched)
 - Storage: ~15 MB for 57,000 records + 4 KPI tables
 - Query Response: <100ms for monitoring views
@@ -1270,6 +1355,7 @@ for col in fare_columns:
 ### 9.4 Resource Utilization
 
 **Docker Containers**:
+
 - Total Memory: ~2.5 GB
 - CPU Usage: 10-30% during pipeline execution
 - Disk I/O: Moderate (batch operations)
@@ -1347,6 +1433,7 @@ for col in fare_columns:
 ### MySQL Staging Database
 
 **Table: staging_flights**
+
 ```sql
 CREATE TABLE staging_flights (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -1376,6 +1463,7 @@ CREATE INDEX idx_is_active ON flights_analytics(is_active);
 ```
 
 **Table: flights_analytics_history** *(New)*
+
 ```sql
 CREATE TABLE flights_analytics_history (
     history_id SERIAL PRIMARY KEY,
@@ -1403,6 +1491,7 @@ CREATE TABLE flights_analytics_history (
 ```
 
 **Table: pipeline_execution_log**
+
 ```sql
 CREATE TABLE pipeline_execution_log (
     id SERIAL PRIMARY KEY,
@@ -1421,6 +1510,7 @@ CREATE TABLE pipeline_execution_log (
 ```
 
 **Table: data_quality_log**
+
 ```sql
 CREATE TABLE data_quality_log (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -1433,6 +1523,7 @@ CREATE TABLE data_quality_log (
 ```
 
 ### Post├── 01_create_tables.sql          # MySQL schema
+
 │   │   └── 02_add_incremental_columns.sql # Incremental loading migration
 │   ├── postgres/
 │   │   ├── 01_create_tables.sql          # PostgreSQL schema
@@ -1456,6 +1547,7 @@ CREATE TABLE flights_analytics (
     is_peak_season BOOLEAN,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 ```
 
 **Table: pipeline_execution_log**
@@ -1476,7 +1568,7 @@ CREATE TABLE pipeline_execution_log (
 
 ---
 
-## Appendix B: Configuration Files with advanced incremental loading capabilities:
+## Appendix B: Configuration Files with advanced incremental loading capabilities
 
 ✅ **Robust ETL Architecture**: Dual-database design with clear staging and analytics separation  
 ✅ **High Data Quality**: 100% validation success with comprehensive quality checks  
@@ -1488,6 +1580,7 @@ CREATE TABLE pipeline_execution_log (
 ✅ **Auditable**: Full version history, time-travel queries, price change tracking  
 
 The pipeline processes 57,000 flight records with 100% success rate, using:
+
 - **Incremental Mode** (Mon-Sat): ~2 minutes, processes only changed records (10-20% typically)
 - **Full Refresh Mode** (Sunday): ~9 minutes, complete dataset reload for validation
 - **4 KPI Tables**: Automated business metrics computation
@@ -1496,22 +1589,27 @@ The pipeline processes 57,000 flight records with 100% success rate, using:
 
 All orchestrated by Apache Airflow with automated health monitoring every 15 minutes and intelligent load mode switching based on day of week
 Password: staging_pass
+
 ```
 
 **PostgreSQL Analytics**:
 ```
+
 Host: localhost
 Port: 5433
 Database: analytics_db
 Username: analytics_user
 Password: analytics_pass
+
 ```
 
 **Airflow UI**:
 ```
-URL: http://localhost:8080
+
+URL: <http://localhost:8080>
 Username: admin
 Password: admin
+
 ```
 
 ---
