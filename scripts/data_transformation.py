@@ -1,12 +1,14 @@
 """
 Data Transformation Module
 Handles data transformation and seasonal classification
+Supports both full refresh and incremental (CDC) patterns
 """
 import pandas as pd
 import logging
 from sqlalchemy import create_engine, text
-from typing import Dict
+from typing import Dict, Tuple
 from datetime import datetime
+import hashlib
 import sys
 sys.path.append('/opt/airflow')
 
@@ -33,15 +35,84 @@ class DataTransformer:
         logger.info("Data Transformer initialized")
     
     def load_staging_data(self) -> pd.DataFrame:
-        """Load validated data from staging"""
+        """Load validated data from staging (active records only for incremental)"""
         try:
-            query = "SELECT * FROM staging_flights"
+            if pipeline_config.USE_INCREMENTAL_LOAD:
+                # Load only active records for incremental processing
+                query = "SELECT * FROM staging_flights WHERE is_active = TRUE"
+                logger.info("Loading active records from staging (incremental mode)")
+            else:
+                # Load all records for full refresh
+                query = "SELECT * FROM staging_flights"
+                logger.info("Loading all records from staging (full refresh mode)")
+            
             df = pd.read_sql(query, self.mysql_engine)
             logger.info(f"Loaded {len(df)} records from staging for transformation")
             return df
         except Exception as e:
             logger.error(f"Error loading staging data: {str(e)}")
             raise TransformationError(f"Error loading staging data: {str(e)}")
+    
+    
+    
+    def load_staging_data_incremental(self) -> pd.DataFrame:
+        """Load only new/updated records since last successful run"""
+        try:
+            # Get last successful transformation timestamp
+            last_run_query = """
+                SELECT MAX(execution_date) as last_run 
+                FROM pipeline_execution_log 
+                WHERE task_id = 'data_transformation' 
+                AND status = 'SUCCESS'
+            """
+            
+            with self.postgres_engine.connect() as conn:
+                result = conn.execute(text(last_run_query)).fetchone()
+                last_run = result[0] if result and result[0] else datetime(1970, 1, 1)
+            
+            logger.info(f"Last successful transformation: {last_run}")
+            
+            # Load records ingested after last run
+            # Convert datetime to string for MySQL compatibility
+            last_run_str = last_run.strftime('%Y-%m-%d %H:%M:%S')
+            
+            query = f"""
+                SELECT * FROM staging_flights 
+                WHERE is_active = TRUE 
+                AND ingestion_timestamp > '{last_run_str}'
+            """
+            
+            df = pd.read_sql(query, self.mysql_engine)
+            logger.info(f"Loaded {len(df)} incremental records from staging")
+            
+            return df
+            
+        except Exception as e:
+            logger.error(f"Error loading incremental data: {str(e)}")
+            # Fallback to all active records if error
+            logger.warning("Falling back to loading all active records")
+            return self.load_staging_data()
+    
+    
+    
+    def generate_record_hash(self, row: pd.Series) -> str:
+        """Generate unique hash for a record"""
+        try:
+            key_fields = (
+                f"{row.get('airline', '')}|"
+                f"{row.get('source', '')}|"
+                f"{row.get('destination', '')}|"
+                f"{row.get('date_of_journey', '')}|"
+                f"{row.get('departure_time', '')}"
+            )
+            
+            if pipeline_config.HASH_ALGORITHM == 'sha256':
+                return hashlib.sha256(key_fields.encode()).hexdigest()
+            else:
+                return hashlib.md5(key_fields.encode()).hexdigest()
+        except Exception as e:
+            logger.warning(f"Error generating hash: {str(e)}")
+            return ''
     
     
     def calculate_total_fare(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -263,7 +334,7 @@ class DataTransformer:
                 logger.info(f"Truncated {table_name} table")
             
             # Save data in batches
-            batch_size = pipeline_config.BATCH_SIZE
+            batch_size = pipeline_config.BATCH_SIZE  # 5000 records per batch
             total_saved = 0
             
             for i in range(0, len(df_to_save), batch_size):
@@ -287,9 +358,125 @@ class DataTransformer:
     
     
     
+    def save_to_analytics_db_incremental(self, df: pd.DataFrame, table_name: str = 'flights_analytics') -> Tuple[int, int]:
+        """
+        Save data incrementally using UPSERT (INSERT ... ON CONFLICT UPDATE)
+        
+        Args:
+            df: DataFrame to save
+            table_name: Target table name
+            
+        Returns:
+            Tuple[int, int]: (rows_inserted, rows_updated)
+        """
+        try:
+            if len(df) == 0:
+                logger.info("No new records to process")
+                return 0, 0
+            
+            # Prepare columns
+            columns_to_save = [
+                'airline', 'source', 'destination',
+                'base_fare', 'tax_surcharge', 'total_fare',
+                'date_of_journey', 'departure_time', 'arrival_time',
+                'duration', 'stops', 'season', 'is_peak_season'
+            ]
+            
+            # Only include columns that exist
+            available_columns = [col for col in columns_to_save if col in df.columns]
+            df_to_save = df[available_columns].copy()
+            
+            # Add tracking columns
+            df_to_save['record_hash'] = df.apply(self.generate_record_hash, axis=1)
+            df_to_save['last_updated_date'] = datetime.now()
+            df_to_save['is_active'] = True
+            
+            # Convert time columns from bigint to TIME format
+            for time_col in ['departure_time', 'arrival_time']:
+                if time_col in df_to_save.columns:
+                    df_to_save[time_col] = pd.to_timedelta(df_to_save[time_col], unit='us').apply(
+                        lambda x: (pd.Timestamp('1970-01-01') + x).time() if pd.notna(x) else None
+                    )
+            
+            rows_inserted = 0
+            rows_updated = 0
+            
+            # Process in batches
+            batch_size = pipeline_config.BATCH_SIZE
+            
+            for i in range(0, len(df_to_save), batch_size):
+                batch_df = df_to_save.iloc[i:i+batch_size].copy()
+                
+                # Create temporary table for batch
+                temp_table = f'temp_flights_batch_{i}'
+                batch_df.to_sql(temp_table, self.postgres_engine, if_exists='replace', index=False)
+                
+                # Perform UPSERT using ON CONFLICT
+                upsert_query = f"""
+                    WITH upsert AS (
+                        INSERT INTO {table_name} (
+                            airline, source, destination,
+                            base_fare, tax_surcharge, total_fare,
+                            date_of_journey, departure_time, arrival_time,
+                            duration, stops, season, is_peak_season,
+                            record_hash, last_updated_date, is_active
+                        )
+                        SELECT 
+                            airline, source, destination,
+                            base_fare, tax_surcharge, total_fare,
+                            date_of_journey, departure_time, arrival_time,
+                            duration, stops, season, is_peak_season,
+                            record_hash, last_updated_date, is_active
+                        FROM {temp_table}
+                        ON CONFLICT (airline, source, destination, date_of_journey, departure_time) 
+                        DO UPDATE SET
+                            base_fare = EXCLUDED.base_fare,
+                            tax_surcharge = EXCLUDED.tax_surcharge,
+                            total_fare = EXCLUDED.total_fare,
+                            arrival_time = EXCLUDED.arrival_time,
+                            duration = EXCLUDED.duration,
+                            stops = EXCLUDED.stops,
+                            season = EXCLUDED.season,
+                            is_peak_season = EXCLUDED.is_peak_season,
+                            record_hash = EXCLUDED.record_hash,
+                            last_updated_date = EXCLUDED.last_updated_date,
+                            version_number = {table_name}.version_number + 1,
+                            is_active = EXCLUDED.is_active
+                        RETURNING (xmax = 0) AS inserted
+                    )
+                    SELECT 
+                        COUNT(*) FILTER (WHERE inserted) as inserts,
+                        COUNT(*) FILTER (WHERE NOT inserted) as updates
+                    FROM upsert
+                """
+                
+                with self.postgres_engine.begin() as conn:
+                    result = conn.execute(text(upsert_query)).fetchone()
+                    batch_inserts = result[0] if result else 0
+                    batch_updates = result[1] if result else 0
+                    
+                    rows_inserted += batch_inserts
+                    rows_updated += batch_updates
+                    
+                    logger.info(f"Batch {i//batch_size + 1}: {batch_inserts} inserted, {batch_updates} updated")
+                    
+                    # Drop temp table
+                    conn.execute(text(f"DROP TABLE IF EXISTS {temp_table}"))
+            
+            logger.info(f"Incremental save completed: {rows_inserted} inserted, {rows_updated} updated")
+            
+            return rows_inserted, rows_updated
+            
+        except Exception as e:
+            logger.error(f"Error in incremental save: {str(e)}")
+            raise TransformationError(f"Error in incremental save: {str(e)}")
+    
+    
+    
     def execute_transformation(self) -> Dict:
         """
         Main execution method for data transformation
+        Supports both full refresh and incremental patterns
         
         Returns:
             dict: Transformation results
@@ -297,9 +484,31 @@ class DataTransformer:
         try:
             logger.info("Starting data transformation process")
             
-            # Load data
-            df = self.load_staging_data()
+            # Determine load strategy
+            use_incremental = pipeline_config.USE_INCREMENTAL_LOAD
+            
+            if use_incremental:
+                logger.info("Using INCREMENTAL transformation mode")
+                # Load only new/changed records
+                df = self.load_staging_data_incremental()
+            else:
+                logger.info("Using FULL REFRESH transformation mode")
+                # Load all records
+                df = self.load_staging_data()
+            
             initial_count = len(df)
+            
+            if initial_count == 0:
+                logger.info("No records to transform")
+                return {
+                    'status': 'SUCCESS',
+                    'load_mode': 'INCREMENTAL' if use_incremental else 'FULL_REFRESH',
+                    'initial_records': 0,
+                    'final_records': 0,
+                    'records_saved': 0,
+                    'records_inserted': 0,
+                    'records_updated': 0
+                }
             
             # Transform data
             df = self.calculate_total_fare(df)
@@ -309,13 +518,22 @@ class DataTransformer:
             final_count = len(df)
             
             # Save to analytics database
-            records_saved = self.save_to_analytics_db(df)
+            if use_incremental:
+                rows_inserted, rows_updated = self.save_to_analytics_db_incremental(df)
+                records_saved = rows_inserted + rows_updated
+            else:
+                records_saved = self.save_to_analytics_db(df)
+                rows_inserted = records_saved
+                rows_updated = 0
             
             return {
                 'status': 'SUCCESS',
+                'load_mode': 'INCREMENTAL' if use_incremental else 'FULL_REFRESH',
                 'initial_records': initial_count,
                 'final_records': final_count,
                 'records_saved': records_saved,
+                'records_inserted': rows_inserted,
+                'records_updated': rows_updated,
                 'records_removed': initial_count - final_count
             }
             

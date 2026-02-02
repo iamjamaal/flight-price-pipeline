@@ -1,6 +1,7 @@
 """
 KPI Computation Module
 Calculates and stores key performance indicators
+Filters only active records for accurate metrics
 """
 import pandas as pd
 import logging
@@ -9,7 +10,7 @@ from typing import Dict
 import sys
 sys.path.append('/opt/airflow')
 
-from dags.config.pipeline_config import db_config
+from dags.config.pipeline_config import db_config, pipeline_config
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,9 +32,19 @@ class KPIComputer:
         logger.info("KPI Computer initialized")
     
     def load_analytics_data(self) -> pd.DataFrame:
-        """Load data from analytics table"""
+        """Load active records only from analytics table for KPI computation"""
         try:
-            query = "SELECT * FROM flights_analytics"
+            # Only compute KPIs on active records
+            if pipeline_config.USE_INCREMENTAL_LOAD:
+                query = """
+                    SELECT * FROM flights_analytics 
+                    WHERE is_active = TRUE
+                """
+                logger.info("Loading active records only for KPI computation (incremental mode)")
+            else:
+                query = "SELECT * FROM flights_analytics"
+                logger.info("Loading all records for KPI computation (full refresh mode)")
+            
             df = pd.read_sql(query, self.postgres_engine)
             logger.info(f"Loaded {len(df)} records for KPI computation")
             return df

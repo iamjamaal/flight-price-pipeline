@@ -56,6 +56,12 @@ class PipelineConfig:
     # Batch processing
     BATCH_SIZE: int = 1000
     
+    # Incremental loading settings
+    USE_INCREMENTAL_LOAD: bool = os.getenv('USE_INCREMENTAL_LOAD', 'true').lower() == 'true'
+    FULL_REFRESH_DAY: int = int(os.getenv('FULL_REFRESH_DAY', 0))  # 0 = Sunday for weekly full refresh
+    HASH_ALGORITHM: str = 'md5'  # md5, sha256
+    ENABLE_HISTORY_TRACKING: bool = True  # Track record changes over time
+    
     def __post_init__(self):
         """Initialize complex default values"""
         if self.REQUIRED_COLUMNS is None:

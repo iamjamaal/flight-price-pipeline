@@ -1,11 +1,15 @@
 """
 Data Ingestion Module
 Handles loading CSV data into MySQL staging database
+Supports both full refresh and incremental loading
 """
 import pandas as pd
 import logging
 from sqlalchemy import create_engine, text
-from typing import Tuple
+from typing import Tuple, Dict
+from datetime import datetime
+import hashlib
+import os
 import sys
 sys.path.append('/opt/airflow')
 
@@ -228,6 +232,165 @@ class DataIngestion:
     
     
     
+    def generate_record_hash(self, row: pd.Series) -> str:
+        """
+        Generate unique hash for a record to detect changes
+        
+        Args:
+            row: DataFrame row
+            
+        Returns:
+            str: MD5 or SHA256 hash of key fields
+        """
+        try:
+            # Include key fields that define record uniqueness
+            key_fields = (
+                f"{row.get('airline', '')}|"
+                f"{row.get('source', '')}|"
+                f"{row.get('destination', '')}|"
+                f"{row.get('date_of_journey', '')}|"
+                f"{row.get('departure_time', '')}|"
+                f"{row.get('base_fare', '')}|"
+                f"{row.get('total_fare', '')}"
+            )
+            
+            if pipeline_config.HASH_ALGORITHM == 'sha256':
+                return hashlib.sha256(key_fields.encode()).hexdigest()
+            else:
+                return hashlib.md5(key_fields.encode()).hexdigest()
+                
+        except Exception as e:
+            logger.warning(f"Error generating hash: {str(e)}")
+            return ''
+    
+    
+    
+    def get_existing_hashes(self) -> set:
+        """
+        Get all existing record hashes from staging table
+        
+        Returns:
+            set: Set of existing hashes
+        """
+        try:
+            query = "SELECT record_hash FROM staging_flights WHERE is_active = TRUE AND record_hash IS NOT NULL"
+            existing_df = pd.read_sql(query, self.mysql_engine)
+            existing_hashes = set(existing_df['record_hash'].tolist())
+            logger.info(f"Retrieved {len(existing_hashes)} existing record hashes")
+            return existing_hashes
+        except Exception as e:
+            logger.warning(f"Error getting existing hashes: {str(e)}")
+            return set()
+    
+    
+    
+    def load_to_staging_incremental(self, df: pd.DataFrame, table_name: str = 'staging_flights') -> Tuple[int, int, int]:
+        """
+        Incremental load: Insert new records, mark removed records as inactive
+        
+        Args:
+            df: DataFrame to load
+            table_name: Target table name
+            
+        Returns:
+            Tuple[int, int, int]: (rows_inserted, rows_updated, rows_unchanged)
+        """
+        try:
+            initial_count = len(df)
+            logger.info(f"Starting incremental load. Total records in CSV: {initial_count}")
+            
+            # Add metadata columns
+            import os
+            df['source_file'] = os.path.basename(pipeline_config.RAW_DATA_PATH)
+            df['ingestion_timestamp'] = datetime.now()
+            df['is_active'] = True
+            
+            # Generate hash for each record
+            logger.info("Generating record hashes...")
+            df['record_hash'] = df.apply(self.generate_record_hash, axis=1)
+            
+            # Get existing hashes from database
+            existing_hashes = self.get_existing_hashes()
+            
+            # Classify records
+            new_records_mask = ~df['record_hash'].isin(existing_hashes)
+            new_records = df[new_records_mask]
+            existing_records = df[~new_records_mask]
+            
+            rows_inserted = 0
+            rows_unchanged = len(existing_records)
+            
+            # Insert new records in batches
+            if len(new_records) > 0:
+                logger.info(f"Inserting {len(new_records)} new records...")
+                
+                # Select columns for insertion
+                staging_columns = [
+                    'airline', 'source', 'destination',
+                    'base_fare', 'tax_surcharge', 'total_fare',
+                    'date_of_journey', 'departure_time', 'arrival_time',
+                    'duration', 'stops',
+                    'record_hash', 'source_file', 'ingestion_timestamp', 'is_active'
+                ]
+                
+                available_columns = [col for col in staging_columns if col in new_records.columns]
+                new_records_to_load = new_records[available_columns].copy()
+                
+                # Batch insert
+                batch_size = pipeline_config.BATCH_SIZE
+                for i in range(0, len(new_records_to_load), batch_size):
+                    batch_df = new_records_to_load.iloc[i:i+batch_size]
+                    
+                    try:
+                        batch_df.to_sql(
+                            name=table_name,
+                            con=self.mysql_engine,
+                            if_exists='append',
+                            index=False,
+                            method='multi'
+                        )
+                        rows_inserted += len(batch_df)
+                        logger.info(f"Batch {i//batch_size + 1}: Inserted {len(batch_df)} records")
+                    except Exception as batch_error:
+                        logger.error(f"Batch {i//batch_size + 1} failed: {str(batch_error)}")
+            
+            # Mark records not in new batch as inactive (soft delete)
+            incoming_hashes = set(df['record_hash'].tolist())
+            hashes_to_deactivate = existing_hashes - incoming_hashes
+            
+            if hashes_to_deactivate:
+                logger.info(f"Marking {len(hashes_to_deactivate)} removed records as inactive...")
+                
+                # Batch deactivate to avoid SQL parameter limits
+                deactivate_batch_size = 1000
+                hashes_list = list(hashes_to_deactivate)
+                
+                for i in range(0, len(hashes_list), deactivate_batch_size):
+                    batch_hashes = hashes_list[i:i+deactivate_batch_size]
+                    placeholders = ','.join([':hash' + str(j) for j in range(len(batch_hashes))])
+                    
+                    with self.mysql_engine.begin() as conn:
+                        deactivate_query = f"""
+                            UPDATE staging_flights 
+                            SET is_active = FALSE 
+                            WHERE record_hash IN ({placeholders})
+                        """
+                        params = {f'hash{j}': h for j, h in enumerate(batch_hashes)}
+                        conn.execute(text(deactivate_query), params)
+                
+                logger.info(f"Deactivated {len(hashes_to_deactivate)} records")
+            
+            logger.info(f"Incremental load completed: {rows_inserted} new, {rows_unchanged} unchanged, "
+                       f"{len(hashes_to_deactivate)} deactivated")
+            
+            return rows_inserted, 0, rows_unchanged
+            
+        except Exception as e:
+            logger.error(f"Incremental load failed: {str(e)}")
+            raise DataIngestionError(f"Incremental load failed: {str(e)}")
+    
+    
+    
     def load_to_staging(self, df: pd.DataFrame, table_name: str = 'staging_flights') -> Tuple[int, int]:
         """
         Load DataFrame to MySQL staging table
@@ -307,9 +470,40 @@ class DataIngestion:
     
     
     
-    def execute_ingestion(self) -> dict:
+    
+    def should_use_incremental_load(self) -> bool:
+        """
+        Determine if incremental load should be used
+        
+        Returns:
+            bool: True if incremental, False for full refresh
+        """
+        # Check configuration
+        if not pipeline_config.USE_INCREMENTAL_LOAD:
+            logger.info("Incremental loading disabled in configuration")
+            return False
+        
+        # Check if it's full refresh day (e.g., Sunday)
+        from datetime import datetime
+        today_weekday = datetime.now().weekday()
+        
+        # Convert Sunday (6 in Python) to 0 for comparison
+        if today_weekday == 6:
+            today_weekday = 0
+        
+        if today_weekday == pipeline_config.FULL_REFRESH_DAY:
+            logger.info(f"Today is full refresh day (weekday {pipeline_config.FULL_REFRESH_DAY})")
+            return False
+        
+        logger.info("Using incremental load")
+        return True
+    
+    
+    
+    def execute_ingestion(self) -> Dict:
         """
         Main execution method for data ingestion
+        Supports both full refresh and incremental loading
         
         Returns:
             dict: Ingestion results
@@ -327,19 +521,34 @@ class DataIngestion:
             # Step 4: Clean data
             df = self.clean_and_prepare_data(df)
             
-            # Step 5: Truncate staging table
-            self.truncate_staging_table()
+            # Step 5: Determine load strategy
+            use_incremental = self.should_use_incremental_load()
             
-            # Step 6: Load to staging
-            rows_inserted, rows_failed = self.load_to_staging(df)
+            if use_incremental:
+                # Incremental load
+                logger.info("Executing INCREMENTAL load...")
+                rows_inserted, rows_updated, rows_unchanged = self.load_to_staging_incremental(df)
+                rows_failed = 0
+                load_mode = 'INCREMENTAL'
+            else:
+                # Full refresh
+                logger.info("Executing FULL REFRESH...")
+                self.truncate_staging_table()
+                rows_inserted, rows_failed = self.load_to_staging(df)
+                rows_updated = 0
+                rows_unchanged = 0
+                load_mode = 'FULL_REFRESH'
             
-            # Step 7: Log audit
+            # Step 6: Log audit
             self.log_ingestion_audit(rows_inserted, rows_failed)
             
             return {
                 'status': 'SUCCESS',
+                'load_mode': load_mode,
                 'total_records': len(df),
                 'rows_inserted': rows_inserted,
+                'rows_updated': rows_updated,
+                'rows_unchanged': rows_unchanged,
                 'rows_failed': rows_failed
             }
             
@@ -352,6 +561,7 @@ class DataIngestion:
         finally:
             self.mysql_engine.dispose()
             logger.info("Database connections closed")
+
 
 
 
