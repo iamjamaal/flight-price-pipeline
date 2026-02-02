@@ -22,7 +22,7 @@ from monitoring import PipelineMonitor
 
 # Default arguments
 default_args = {
-    'owner': 'data-engineering-team',
+    'owner': 'noah_jamal_nabila',
     'depends_on_past': False,
     'email': airflow_config.EMAIL_LIST,
     'email_on_failure': airflow_config.EMAIL_ON_FAILURE,
@@ -73,6 +73,7 @@ def run_data_transformation(**context):
     return result
 
 
+
 def run_kpi_computation(**context):
     """Task function: Run KPI computation"""
     kpi_computer = KPIComputer()
@@ -83,6 +84,7 @@ def run_kpi_computation(**context):
     
     context['task_instance'].xcom_push(key='kpi_result', value=result)
     return result
+
 
 
 def log_pipeline_execution(**context):
@@ -202,7 +204,7 @@ def monitor_pipeline_health(**context):
             severity='WARNING' if health_status['overall_status'] == 'WARNING' else 'ERROR'
         )
     else:
-        print("✅ Pipeline health check PASSED")
+        print("Pipeline health check PASSED")
     
     return health_status['overall_status']
 

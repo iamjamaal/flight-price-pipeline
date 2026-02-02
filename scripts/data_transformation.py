@@ -43,6 +43,7 @@ class DataTransformer:
             logger.error(f"Error loading staging data: {str(e)}")
             raise TransformationError(f"Error loading staging data: {str(e)}")
     
+    
     def calculate_total_fare(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Calculate total fare if not present or recalculate if inconsistent
@@ -84,6 +85,8 @@ class DataTransformer:
             logger.error(f"Error calculating total fare: {str(e)}")
             raise TransformationError(f"Error calculating total fare: {str(e)}")
     
+    
+    
     def classify_season(self, date_obj) -> str:
         """
         Classify a date into a season
@@ -116,6 +119,8 @@ class DataTransformer:
         else:
             return 'Spring'
     
+    
+    
     def determine_peak_season(self, date_obj, season: str) -> bool:
         """
         Determine if a date falls within peak travel season
@@ -140,6 +145,8 @@ class DataTransformer:
         
         peak_months = [4, 5, 7, 10, 12]
         return month in peak_months
+    
+    
     
     def add_seasonal_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -171,6 +178,8 @@ class DataTransformer:
         except Exception as e:
             logger.error(f"Error adding seasonal features: {str(e)}")
             raise TransformationError(f"Error adding seasonal features: {str(e)}")
+    
+    
     
     def clean_and_standardize(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -213,6 +222,8 @@ class DataTransformer:
         except Exception as e:
             logger.error(f"Error during final cleaning: {str(e)}")
             raise TransformationError(f"Error during final cleaning: {str(e)}")
+    
+    
     
     def save_to_analytics_db(self, df: pd.DataFrame, table_name: str = 'flights_analytics') -> int:
         """
@@ -274,6 +285,8 @@ class DataTransformer:
             logger.error(f"Error saving to analytics database: {str(e)}")
             raise TransformationError(f"Error saving to analytics database: {str(e)}")
     
+    
+    
     def execute_transformation(self) -> Dict:
         """
         Main execution method for data transformation
@@ -315,6 +328,8 @@ class DataTransformer:
         finally:
             self.mysql_engine.dispose()
             self.postgres_engine.dispose()
+
+
 
 
 def main():

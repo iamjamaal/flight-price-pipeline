@@ -35,6 +35,8 @@ class DataIngestion:
             pool_recycle=3600
         )
         logger.info("MySQL connection established")
+        
+        
     
     def validate_csv_file(self, file_path: str) -> bool:
         """
@@ -60,6 +62,9 @@ class DataIngestion:
         except Exception as e:
             logger.error(f"CSV validation failed: {str(e)}")
             raise DataIngestionError(f"CSV validation failed: {str(e)}")
+    
+    
+    
     
     def read_csv_data(self, file_path: str) -> pd.DataFrame:
         """
@@ -102,6 +107,8 @@ class DataIngestion:
         except Exception as e:
             logger.error(f"Error reading CSV: {str(e)}")
             raise DataIngestionError(f"Error reading CSV: {str(e)}")
+    
+    
     
     def standardize_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -156,6 +163,8 @@ class DataIngestion:
         
         return df_renamed
     
+    
+    
     def clean_and_prepare_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Basic data cleaning and preparation
@@ -205,6 +214,8 @@ class DataIngestion:
             logger.error(f"Error during data cleaning: {str(e)}")
             raise DataIngestionError(f"Error during data cleaning: {str(e)}")
     
+    
+    
     def truncate_staging_table(self):
         """Truncate staging table before fresh load"""
         try:
@@ -214,6 +225,8 @@ class DataIngestion:
         except Exception as e:
             logger.error(f"Error truncating table: {str(e)}")
             raise DataIngestionError(f"Error truncating table: {str(e)}")
+    
+    
     
     def load_to_staging(self, df: pd.DataFrame, table_name: str = 'staging_flights') -> Tuple[int, int]:
         """
@@ -276,6 +289,8 @@ class DataIngestion:
             logger.error(f"Error loading data to staging: {str(e)}")
             raise DataIngestionError(f"Error loading data to staging: {str(e)}")
     
+    
+    
     def log_ingestion_audit(self, records_processed: int, records_failed: int):
         """Log ingestion audit information"""
         try:
@@ -289,6 +304,8 @@ class DataIngestion:
                 logger.info("Audit log updated successfully")
         except Exception as e:
             logger.warning(f"Failed to log audit: {str(e)}")
+    
+    
     
     def execute_ingestion(self) -> dict:
         """
@@ -335,6 +352,7 @@ class DataIngestion:
         finally:
             self.mysql_engine.dispose()
             logger.info("Database connections closed")
+
 
 
 def main():

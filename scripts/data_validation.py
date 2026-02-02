@@ -35,6 +35,8 @@ class DataValidator:
         self.validation_results = []
         logger.info("Data Validator initialized")
     
+    
+    
     def load_staging_data(self) -> pd.DataFrame:
         """Load data from staging table"""
         try:
@@ -45,6 +47,8 @@ class DataValidator:
         except Exception as e:
             logger.error(f"Error loading staging data: {str(e)}")
             raise ValidationError(f"Error loading staging data: {str(e)}")
+    
+    
     
     def check_required_columns(self, df: pd.DataFrame) -> Dict:
         """
@@ -81,6 +85,8 @@ class DataValidator:
         except Exception as e:
             logger.error(f"Required columns check failed: {str(e)}")
             raise ValidationError(str(e))
+    
+    
     
     def check_null_values(self, df: pd.DataFrame) -> Dict:
         """
@@ -122,6 +128,8 @@ class DataValidator:
         except Exception as e:
             logger.error(f"Null values check failed: {str(e)}")
             raise ValidationError(str(e))
+    
+    
     
     def check_data_types(self, df: pd.DataFrame) -> Dict:
         """
@@ -170,6 +178,8 @@ class DataValidator:
         except Exception as e:
             logger.error(f"Data type check failed: {str(e)}")
             raise ValidationError(str(e))
+    
+    
     
     def check_fare_consistency(self, df: pd.DataFrame) -> Dict:
         """
@@ -235,6 +245,8 @@ class DataValidator:
             logger.error(f"Fare consistency check failed: {str(e)}")
             raise ValidationError(str(e))
     
+    
+    
     def check_city_names(self, df: pd.DataFrame) -> Dict:
         """
         Validate city names are not empty and contain valid characters
@@ -281,6 +293,8 @@ class DataValidator:
             logger.error(f"City name check failed: {str(e)}")
             raise ValidationError(str(e))
     
+    
+    
     def check_duplicate_records(self, df: pd.DataFrame) -> Dict:
         """
         Check for duplicate records
@@ -319,6 +333,8 @@ class DataValidator:
             logger.error(f"Duplicate records check failed: {str(e)}")
             raise ValidationError(str(e))
     
+    
+    
     def log_validation_results(self):
         """Log all validation results to database"""
         try:
@@ -334,6 +350,8 @@ class DataValidator:
             logger.info(f"Logged {len(self.validation_results)} validation results")
         except Exception as e:
             logger.warning(f"Failed to log validation results: {str(e)}")
+    
+    
     
     def execute_validation(self) -> Dict:
         """
@@ -383,6 +401,8 @@ class DataValidator:
             }
         finally:
             self.mysql_engine.dispose()
+
+
 
 
 def main():

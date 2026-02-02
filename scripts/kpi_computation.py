@@ -41,6 +41,8 @@ class KPIComputer:
             logger.error(f"Error loading analytics data: {str(e)}")
             raise KPIComputationError(f"Error loading analytics data: {str(e)}")
     
+    
+    
     def compute_average_fare_by_airline(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         KPI 1: Compute average fare metrics by airline
@@ -78,6 +80,8 @@ class KPIComputer:
             logger.error(f"Error computing average fare by airline: {str(e)}")
             raise KPIComputationError(f"Error computing average fare by airline: {str(e)}")
     
+    
+    
     def compute_seasonal_fare_variation(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         KPI 2: Compute seasonal fare variation
@@ -114,6 +118,8 @@ class KPIComputer:
         except Exception as e:
             logger.error(f"Error computing seasonal fare variation: {str(e)}")
             raise KPIComputationError(f"Error computing seasonal fare variation: {str(e)}")
+    
+    
     
     def compute_popular_routes(self, df: pd.DataFrame, top_n: int = 20) -> pd.DataFrame:
         """
@@ -160,6 +166,8 @@ class KPIComputer:
             logger.error(f"Error computing popular routes: {str(e)}")
             raise KPIComputationError(f"Error computing popular routes: {str(e)}")
     
+    
+    
     def compute_booking_count_by_airline(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         KPI 4: Compute booking count metrics by airline
@@ -205,6 +213,8 @@ class KPIComputer:
             logger.error(f"Error computing booking count by airline: {str(e)}")
             raise KPIComputationError(f"Error computing booking count by airline: {str(e)}")
     
+    
+    
     def save_kpi_to_db(self, kpi_df: pd.DataFrame, table_name: str) -> int:
         """
         Save KPI DataFrame to database
@@ -236,6 +246,8 @@ class KPIComputer:
         except Exception as e:
             logger.error(f"Error saving KPI to database: {str(e)}")
             raise KPIComputationError(f"Error saving KPI to database: {str(e)}")
+    
+    
     
     def execute_kpi_computation(self) -> Dict:
         """
@@ -288,6 +300,7 @@ class KPIComputer:
             }
         finally:
             self.postgres_engine.dispose()
+
 
 
 def main():
