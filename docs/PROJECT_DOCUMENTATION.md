@@ -1096,15 +1096,7 @@ for col in fare_columns:
 - Query Response: <100ms for monitoring views
 - Connections: Pooled (max 5)
 
-### 9.4 Resource Utilization
 
-**Docker Containers**:
-- Total Memory: ~2.5 GB
-- CPU Usage: 10-30% during pipeline execution
-- Disk I/O: Moderate (batch operations)
-- Network: Internal (minimal external traffic)
-
----
 
 ## 10. Future Enhancements
 
@@ -1289,66 +1281,6 @@ Password: admin
 ```
 
 ---
-
-## Appendix C: File Structure
-
-```
-flight-price-pipeline/
-├── dags/
-│   ├── flight_price_pipeline_dag.py      # Main DAG
-│   ├── monitoring_dashboard_dag.py       # Monitoring DAG
-│   └── config/
-│       └── pipeline_config.py            # Configuration
-│
-├── scripts/
-│   ├── data_ingestion.py                 # CSV → MySQL
-│   ├── data_validation.py                # Quality checks
-│   ├── data_transformation.py            # MySQL → PostgreSQL
-│   ├── kpi_computation.py                # KPI calculations
-│   └── monitoring.py                     # Health monitoring
-│
-├── init-scripts/
-│   ├── mysql/
-│   │   └── 01_create_tables.sql          # MySQL schema
-│   ├── postgres/
-│   │   ├── 01_create_tables.sql          # PostgreSQL schema
-│   │   └── 02_monitoring_views.sql       # 9 monitoring views
-│
-├── data/
-│   ├── raw/
-│   │   └── Flight_Price_Dataset_of_Bangladesh.csv
-│   └── processed/
-│
-├── tests/
-│   ├── test_data_ingestion.py
-│   ├── test_monitoring.py
-│   └── test_pipeline_integration.py
-│
-├── docs/
-│   ├── PROJECT_DOCUMENTATION.md          # This file
-│   ├── MONITORING_GUIDE.md
-│   └── WALKTHROUGH.md
-│
-├── docker-compose.yml                     # Container orchestration
-├── requirements.txt                       # Python dependencies
-└── README.md                             # Project overview
-```
-
----
-
-## Appendix D: Key Technologies
-
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Apache Airflow | 2.8.0 | Workflow orchestration |
-| MySQL | 8.0 | Staging database |
-| PostgreSQL | 15 | Analytics database |
-| Python | 3.11 | Pipeline scripts |
-| Pandas | 2.1.4 | Data manipulation |
-| SQLAlchemy | 2.0.23 | Database ORM |
-| Docker | 24.0 | Containerization |
-| Docker Compose | 2.23 | Multi-container orchestration |
-
 ---
 
 ## Conclusion
