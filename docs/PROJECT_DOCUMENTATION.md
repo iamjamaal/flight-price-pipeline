@@ -2,8 +2,6 @@
 
 **Project**: Flight Price Data Analytics Pipeline  
 **Technology Stack**: Apache Airflow, MySQL, PostgreSQL, Docker, Python  
-**Date**: February 2, 2026  
-**Team**: Data Engineering Team
 
 ---
 
@@ -262,7 +260,7 @@ Timeout: 2 hours
 
 **Default Arguments**:
 ```python
-Owner: data-engineering-team
+Owner: noah_jamal_nabila
 Depends on Past: False
 Email on Failure: True
 Email on Retry: False
@@ -854,7 +852,7 @@ def get_pipeline_health_status() -> Dict:
     """
 ```
 
-**Current Health**: ✅ HEALTHY (all metrics green)
+**Current Health**: HEALTHY (all metrics green)
 
 ---
 
@@ -1357,18 +1355,13 @@ flight-price-pipeline/
 
 The Flight Price Pipeline successfully demonstrates enterprise-grade data engineering practices:
 
-✅ **Robust ETL Architecture**: Dual-database design with clear staging and analytics separation  
-✅ **High Data Quality**: 100% validation success with comprehensive quality checks  
-✅ **Performance Optimized**: Batch processing, connection pooling, transaction safety  
-✅ **Production Ready**: Monitoring, alerting, health checks, error handling  
-✅ **Well Documented**: Comprehensive documentation, code comments, inline help  
-✅ **Maintainable**: Modular design, configuration-driven, Docker containerized  
+ **Robust ETL Architecture**: Dual-database design with clear staging and analytics separation  
+ **High Data Quality**: 100% validation success with comprehensive quality checks  
+ **Performance Optimized**: Batch processing, connection pooling, transaction safety  
+ **Production Ready**: Monitoring, alerting, health checks, error handling  
+ **Well Documented**: Comprehensive documentation, code comments, inline help  
+ **Maintainable**: Modular design, configuration-driven, Docker containerized  
 
 The pipeline processes 57,000 flight records daily with 100% success rate, generating actionable business insights through 4 KPI tables and 9 monitoring views, all orchestrated by Apache Airflow with automated health monitoring every 15 minutes.
 
 ---
-
-**Document Version**: 1.0  
-**Last Updated**: February 2, 2026  
-**Maintained By**: Data Engineering Team  
-**Contact**: [Your Contact Information]
