@@ -236,18 +236,3 @@ docker-compose restart airflow-scheduler
 - Check database connectivity
 - Review validation errors in `data_quality_log` table
 
-### Support
-
-For issues and questions:
-- Check logs first
-- Review error messages
-- Consult documentation
-- Contact: data-team@example.com
-
-## License
-
-MIT License
-
-## Contributors
-
-- Data Engineering Team

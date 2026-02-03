@@ -28,12 +28,12 @@ The Flight Price Pipeline is an enterprise-grade ETL (Extract, Transform, Load) 
 
 ### Key Achievements
 
-- ✅ **100% Data Success Rate**: All pipeline tasks achieve 100% execution success
-- ✅ **57,000 Records Processed**: Complete dataset transformation from CSV to analytics-ready format
-- ✅ **4 KPI Tables**: Automated computation of business metrics
-- ✅ **Zero Downtime**: Dockerized infrastructure with health monitoring
-- ✅ **Data Quality**: 100% completeness across all critical fields
-- ✅ **Real-time Monitoring**: 9 monitoring views with 15-minute health checks
+-  **100% Data Success Rate**: All pipeline tasks achieve 100% execution success
+-  **57,000 Records Processed**: Complete dataset transformation from CSV to analytics-ready format
+-  **4 KPI Tables**: Automated computation of business metrics
+-  **Zero Downtime**: Dockerized infrastructure with health monitoring
+-  **Data Quality**: 100% completeness across all critical fields
+-  **Real-time Monitoring**: 9 monitoring views with 15-minute health checks
 
 ### Technical Highlights
 
@@ -1280,7 +1280,7 @@ for i in range(0, len(df), batch_size):
    - Create data lineage visualization
    - Integrate with Apache Atlas or DataHub
 
-2. **Price Change Analytics** ✅ *Enabled by Incremental Loading*
+2. **Price Change Analytics**  *Enabled by Incremental Loading*
    - Query historical price trends
    - Identify best booking windows
    - Alert on fare spikes or drops
@@ -1570,14 +1570,14 @@ CREATE TABLE pipeline_execution_log (
 
 ## Appendix B: Configuration Files with advanced incremental loading capabilities
 
-✅ **Robust ETL Architecture**: Dual-database design with clear staging and analytics separation  
-✅ **High Data Quality**: 100% validation success with comprehensive quality checks  
-✅ **Performance Optimized**: Incremental loading (77% faster), batch processing, connection pooling, UPSERT operations  
-✅ **Production Ready**: Monitoring, alerting, health checks, error handling, version tracking  
-✅ **Well Documented**: Comprehensive documentation, code comments, inline help  
-✅ **Maintainable**: Modular design, configuration-driven, Docker containerized  
-✅ **Scalable**: Change Data Capture (CDC) with MD5 hashing, handles 10x data growth efficiently  
-✅ **Auditable**: Full version history, time-travel queries, price change tracking  
+ **Robust ETL Architecture**: Dual-database design with clear staging and analytics separation  
+ **High Data Quality**: 100% validation success with comprehensive quality checks  
+ **Performance Optimized**: Incremental loading (77% faster), batch processing, connection pooling, UPSERT operations  
+ **Production Ready**: Monitoring, alerting, health checks, error handling, version tracking  
+ **Well Documented**: Comprehensive documentation, code comments, inline help  
+ **Maintainable**: Modular design, configuration-driven, Docker containerized  
+ **Scalable**: Change Data Capture (CDC) with MD5 hashing, handles 10x data growth efficiently  
+ **Auditable**: Full version history, time-travel queries, price change tracking  
 
 The pipeline processes 57,000 flight records with 100% success rate, using:
 
