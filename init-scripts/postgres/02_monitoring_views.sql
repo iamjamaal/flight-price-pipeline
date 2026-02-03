@@ -6,7 +6,7 @@ CREATE OR REPLACE VIEW vw_pipeline_execution_summary AS
 SELECT 
     DATE(execution_date) as execution_date,
     COUNT(DISTINCT execution_date) as total_runs,
-    COUNT(DISTINCT CASE WHEN status IN ('SUCCESS', 'PASSED') THEN execution_date END) as successful_runs,
+    COUNT(DISTINCT CASE WHEN status IN ('SUCCESS', 'PASSED', 'WARNING') THEN execution_date END) as successful_runs,
     COUNT(DISTINCT CASE WHEN status = 'FAILED' THEN execution_date END) as failed_runs,
     SUM(records_processed) as total_records_processed,
     AVG(EXTRACT(EPOCH FROM execution_time)) as avg_execution_time,
@@ -25,9 +25,9 @@ CREATE OR REPLACE VIEW vw_task_performance AS
 SELECT 
     task_id,
     COUNT(*) as execution_count,
-    SUM(CASE WHEN status IN ('SUCCESS', 'PASSED') THEN 1 ELSE 0 END) as success_count,
+    SUM(CASE WHEN status IN ('SUCCESS', 'PASSED', 'WARNING') THEN 1 ELSE 0 END) as success_count,
     SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failure_count,
-    ROUND(SUM(CASE WHEN status IN ('SUCCESS', 'PASSED') THEN 1 ELSE 0 END)::NUMERIC / COUNT(*) * 100, 2) as success_rate,
+    ROUND(SUM(CASE WHEN status IN ('SUCCESS', 'PASSED', 'WARNING') THEN 1 ELSE 0 END)::NUMERIC / COUNT(*) * 100, 2) as success_rate,
     ROUND(AVG(EXTRACT(EPOCH FROM execution_time))::NUMERIC, 2) as avg_execution_time,
     ROUND(MIN(EXTRACT(EPOCH FROM execution_time))::NUMERIC, 2) as min_execution_time,
     ROUND(MAX(EXTRACT(EPOCH FROM execution_time))::NUMERIC, 2) as max_execution_time,

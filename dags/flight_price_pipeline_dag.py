@@ -110,10 +110,11 @@ def log_pipeline_execution(**context):
             # Log pipeline execution
             log_query = text("""
                 INSERT INTO pipeline_execution_log 
-                (dag_id, task_id, execution_date, status, records_processed, execution_time)
+                (dag_id, task_id, execution_date, status, records_processed, execution_time, 
+                 processing_mode, records_inserted, records_updated)
                 VALUES 
                 (:dag_id, :task_id, :execution_date, :status, :records, 
-                 CAST(:exec_time AS INTERVAL))
+                 CAST(:exec_time AS INTERVAL), :processing_mode, :records_inserted, :records_updated)
             """)
             
             # Convert execution_date from Proxy to datetime
@@ -136,7 +137,10 @@ def log_pipeline_execution(**context):
                     'execution_date': execution_date,
                     'status': ingestion_result.get('status', 'UNKNOWN'),
                     'records': ingestion_result.get('rows_inserted', 0),
-                    'exec_time': '5 minutes'
+                    'exec_time': '5 minutes',
+                    'processing_mode': 'FULL_REFRESH',
+                    'records_inserted': 0,
+                    'records_updated': 0
                 })
             
             # Log validation
@@ -147,7 +151,10 @@ def log_pipeline_execution(**context):
                     'execution_date': execution_date,
                     'status': validation_result.get('status', 'UNKNOWN'),
                     'records': 0,
-                    'exec_time': '2 minutes'
+                    'exec_time': '2 minutes',
+                    'processing_mode': 'FULL_REFRESH',
+                    'records_inserted': 0,
+                    'records_updated': 0
                 })
             
             # Log transformation
@@ -158,7 +165,10 @@ def log_pipeline_execution(**context):
                     'execution_date': execution_date,
                     'status': transformation_result.get('status', 'UNKNOWN'),
                     'records': transformation_result.get('records_saved', 0),
-                    'exec_time': '3 minutes'
+                    'exec_time': '3 minutes',
+                    'processing_mode': transformation_result.get('load_mode', 'FULL_REFRESH'),
+                    'records_inserted': transformation_result.get('records_inserted', 0),
+                    'records_updated': transformation_result.get('records_updated', 0)
                 })
             
             # Log KPI computation
@@ -169,7 +179,10 @@ def log_pipeline_execution(**context):
                     'execution_date': execution_date,
                     'status': kpi_result.get('status', 'UNKNOWN'),
                     'records': kpi_result.get('kpis_computed', 0),
-                    'exec_time': '2 minutes'
+                    'exec_time': '2 minutes',
+                    'processing_mode': 'FULL_REFRESH',
+                    'records_inserted': 0,
+                    'records_updated': 0
                 })
             
             logger.info("Pipeline execution logged successfully")

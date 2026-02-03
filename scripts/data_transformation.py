@@ -485,7 +485,16 @@ class DataTransformer:
             logger.info("Starting data transformation process")
             
             # Determine load strategy
-            use_incremental = pipeline_config.USE_INCREMENTAL_LOAD
+            # Check if today is the full refresh day (e.g., Sunday)
+            today_weekday = datetime.now().weekday()  # Monday=0, Sunday=6
+            # Convert to Sunday=0 format (Python: Monday=0, Sunday=6 -> Our config: Sunday=0, Saturday=6)
+            day_of_week = (today_weekday + 1) % 7  # Convert to Sunday=0 format
+            
+            should_do_full_refresh = (day_of_week == pipeline_config.FULL_REFRESH_DAY)
+            use_incremental = pipeline_config.USE_INCREMENTAL_LOAD and not should_do_full_refresh
+            
+            if should_do_full_refresh:
+                logger.info(f"Today is the FULL REFRESH day (weekday {pipeline_config.FULL_REFRESH_DAY})")
             
             if use_incremental:
                 logger.info("Using INCREMENTAL transformation mode")
