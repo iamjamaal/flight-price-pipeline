@@ -17,10 +17,10 @@ def run_command(cmd, description):
             print("STDERR:", result.stderr)
         return result.returncode == 0
     except subprocess.TimeoutExpired:
-        print("❌ Test timed out")
+        print(" Test timed out")
         return False
     except Exception as e:
-        print(f"❌ Error running test: {e}")
+        print(f" Error running test: {e}")
         return False
 
 def main():
@@ -81,16 +81,16 @@ def main():
     total = len(results)
     
     for test_name, passed_flag in results.items():
-        status = "✅ PASSED" if passed_flag else "❌ FAILED"
+        status = "PASSED" if passed_flag else "FAILED"
         print(f"{test_name:.<50} {status}")
     
     print(f"\n{passed}/{total} tests passed ({(passed/total)*100:.1f}%)")
     
     if passed == total:
-        print("\n🎉 All tests PASSED!")
+        print("\n All tests PASSED!")
         return 0
     else:
-        print(f"\n⚠️  {total - passed} test(s) failed")
+        print(f"\n {total - passed} test(s) failed")
         return 1
 
 if __name__ == "__main__":
