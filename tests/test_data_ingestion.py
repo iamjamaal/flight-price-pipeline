@@ -5,6 +5,7 @@ import unittest
 import pandas as pd
 from unittest.mock import Mock, patch, MagicMock
 import sys
+import hashlib
 sys.path.append('/opt/airflow/scripts')
 
 from data_ingestion import DataIngestion, DataIngestionError
@@ -63,6 +64,52 @@ class TestDataIngestion(unittest.TestCase):
         
         self.assertEqual(result['airline'].iloc[0], 'Test Air')
         self.assertEqual(result['base_fare'].dtype, 'float64')
+    
+    def test_generate_record_hash(self):
+        """Test hash generation for records"""
+        df = pd.DataFrame({
+            'airline': ['Test Air'],
+            'source': ['City A'],
+            'destination': ['City B'],
+            'date_of_journey': ['2024-01-01'],
+            'departure_time': ['10:00'],
+            'base_fare': [100.0],
+            'tax_surcharge': [20.0],
+            'total_fare': [120.0]
+        })
+        
+        result = self.ingestion.generate_record_hash(df)
+        
+        # Check hash column exists
+        self.assertIn('record_hash', result.columns)
+        
+        # Check hash is not null
+        self.assertFalse(result['record_hash'].isnull().any())
+        
+        # Check hash format (MD5 produces 32 character hex string)
+        self.assertEqual(len(result['record_hash'].iloc[0]), 32)
+        
+        # Check hash is consistent for same data
+        result2 = self.ingestion.generate_record_hash(df)
+        self.assertEqual(result['record_hash'].iloc[0], result2['record_hash'].iloc[0])
+    
+    def test_incremental_columns_added(self):
+        """Test that incremental loading columns are added"""
+        df = pd.DataFrame({
+            'airline': ['Test Air'],
+            'base_fare': [100.0]
+        })
+        
+        result = self.ingestion.add_incremental_columns(df)
+        
+        # Check all incremental columns exist
+        expected_columns = ['record_hash', 'is_active', 'ingestion_timestamp']
+        for col in expected_columns:
+            self.assertIn(col, result.columns)
+        
+        # Check default values
+        self.assertTrue(result['is_active'].iloc[0])
+        self.assertIsNotNone(result['ingestion_timestamp'].iloc[0])
 
 
 if __name__ == '__main__':

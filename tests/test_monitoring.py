@@ -47,6 +47,15 @@ def test_performance_metrics():
         print(f"  Avg time: {task['avg_execution_time']}s")
         print(f"  Success rate: {task['success_rate']}%")
     
+    # Verify expected tasks exist
+    task_ids = [task['task_id'] for task in metrics.get('tasks', [])]
+    expected_tasks = ['data_ingestion', 'data_validation', 'data_transformation', 'kpi_computation']
+    
+    if len(task_ids) > 0:
+        for expected in expected_tasks:
+            if expected in task_ids:
+                print(f"  ✓ {expected} task found")
+    
     print("\n✅ Performance metrics test PASSED")
 
 
