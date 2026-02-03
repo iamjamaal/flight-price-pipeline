@@ -26,7 +26,7 @@ def test_health_check():
             print(f"  {key}: {value}")
     
     assert health['overall_status'] in ['HEALTHY', 'WARNING', 'UNHEALTHY', 'ERROR']
-    print("\n✅ Health check test PASSED")
+    print("\n Health check test PASSED")
 
 
 def test_performance_metrics():
@@ -56,7 +56,7 @@ def test_performance_metrics():
             if expected in task_ids:
                 print(f"  ✓ {expected} task found")
     
-    print("\n✅ Performance metrics test PASSED")
+    print("\n Performance metrics test PASSED")
 
 
 def test_data_quality():
@@ -90,7 +90,7 @@ def test_data_quality():
         for check in metrics['validation_history']:
             print(f"  {check['check_name']}: {check['pass_rate']}%")
     
-    print("\n✅ Data quality test PASSED")
+    print("\n Data quality test PASSED")
 
 
 def test_anomaly_detection():
@@ -109,7 +109,7 @@ def test_anomaly_detection():
         print(f"  Count: {anomaly['count']}")
         print(f"  Message: {anomaly['message']}")
     
-    print("\n✅ Anomaly detection test PASSED")
+    print("\n Anomaly detection test PASSED")
 
 
 def test_health_report():
@@ -125,7 +125,7 @@ def test_health_report():
     
     assert len(report) > 0
     assert "FLIGHT PRICE PIPELINE" in report
-    print("\n✅ Health report test PASSED")
+    print("\n Health report test PASSED")
 
 
 def test_alert_system():
@@ -147,7 +147,7 @@ def test_alert_system():
         print(f"  Timestamp: {alert['timestamp']}")
         print(f"  Message: {alert['message']}")
     
-    print("\n✅ Alert system test PASSED")
+    print("\n Alert system test PASSED")
 
 
 def run_all_tests():
@@ -173,7 +173,7 @@ def run_all_tests():
             test()
             passed += 1
         except Exception as e:
-            print(f"\n❌ Test {test.__name__} FAILED: {str(e)}")
+            print(f"\n Test {test.__name__} FAILED: {str(e)}")
             failed += 1
     
     print("\n" + "="*80)
@@ -183,9 +183,9 @@ def run_all_tests():
     print(f"Failed: {failed}/{len(tests)}")
     
     if failed == 0:
-        print("\n✅ ALL TESTS PASSED!")
+        print("\n ALL TESTS PASSED!")
     else:
-        print(f"\n❌ {failed} TEST(S) FAILED")
+        print(f"\n {failed} TEST(S) FAILED")
     
     print("="*80)
 
