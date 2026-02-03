@@ -1,6 +1,6 @@
 -- Migration Script: Add Incremental Loading Support to MySQL Staging
 -- Purpose: Add tracking columns for change detection and incremental processing
--- Date: 2026-02-02
+
 
 USE staging_db;
 
