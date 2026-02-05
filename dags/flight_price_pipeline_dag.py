@@ -23,7 +23,7 @@ from monitoring import PipelineMonitor
 # Default arguments
 default_args = {
     'owner': 'noah_jamal_nabila',
-    'depends_on_past': False,
+    'depends_on_past': True,
     'email': airflow_config.EMAIL_LIST,
     'email_on_failure': airflow_config.EMAIL_ON_FAILURE,
     'email_on_retry': airflow_config.EMAIL_ON_RETRY,
@@ -240,11 +240,11 @@ with DAG(
     and storing results in an analytics database.
     
     ## Pipeline Stages
-    1. **Data Ingestion**: Load CSV data into MySQL staging database
-    2. **Data Validation**: Perform comprehensive quality checks
-    3. **Data Transformation**: Transform and enrich data, add seasonal features
-    4. **KPI Computation**: Calculate analytics metrics
-    5. **Logging**: Record pipeline execution details
+    1. Data Ingestion: Load CSV data into MySQL staging database
+    2. Data Validation: Perform comprehensive quality checks
+    3. Data Transformation: Transform and enrich data, add seasonal features
+    4. KPI Computation: Calculate analytics metrics
+    5. Logging: Record pipeline execution details
     
     ## Schedule
     Runs daily at midnight (configurable)
@@ -272,18 +272,18 @@ with DAG(
         doc_md="""
         ### Data Ingestion
         
-        **Purpose**: Load CSV flight data into MySQL staging database
+        Purpose: Load CSV flight data into MySQL staging database
         
-        **Input**: `Flight_Price_Dataset_of_Bangladesh.csv`
+        Input: `Flight_Price_Dataset_of_Bangladesh.csv`
         
-        **Output**: Data loaded into `staging_flights` table
+        Output: Data loaded into `staging_flights` table
         
-        **Validations**:
+        Validations:
         - CSV file exists and is readable
         - Column names are standardized
         - Data types are appropriate
         
-        **Error Handling**: 
+        Error Handling: 
         - Retries up to 3 times on failure
         - Logs errors to audit table
         """
@@ -297,9 +297,9 @@ with DAG(
         doc_md="""
         ### Data Validation
         
-        **Purpose**: Ensure data quality through comprehensive checks
+        Purpose: Ensure data quality through comprehensive checks
         
-        **Checks Performed**:
+        Checks Performed:
         - Required columns exist
         - No null values in critical fields
         - Data types are correct
@@ -307,9 +307,9 @@ with DAG(
         - City names are valid
         - No duplicate records
         
-        **Output**: Validation results logged to `data_quality_log` table
+        Output: Validation results logged to `data_quality_log` table
         
-        **Failure Handling**: Pipeline fails if critical checks fail
+        Failure Handling: Pipeline fails if critical checks fail
         """
     )
     
@@ -321,16 +321,16 @@ with DAG(
         doc_md="""
         ### Data Transformation
         
-        **Purpose**: Transform and enrich data for analytics
+        Purpose: Transform and enrich data for analytics
         
-        **Transformations**:
+        Transformations:
         - Calculate/verify total fare
         - Add seasonal classification
         - Add peak season flag
         - Standardize text fields
         - Remove duplicates and nulls
         
-        **Output**: Transformed data in PostgreSQL `flights_analytics` table
+        Output: Transformed data in PostgreSQL `flights_analytics` table
         """
     )
     
@@ -342,9 +342,9 @@ with DAG(
         doc_md="""
         ### KPI Computation
         
-        **Purpose**: Calculate key performance indicators
+        Purpose: Calculate key performance indicators
         
-        **KPIs Computed**:
+        KPIs Computed:
         1. Average Fare by Airline
         2. Seasonal Fare Variation
         3. Most Popular Routes (Top 20)
@@ -362,15 +362,15 @@ with DAG(
         doc_md="""
         ### Log Pipeline Execution
         
-        **Purpose**: Record pipeline execution metrics
+        Purpose: Record pipeline execution metrics
         
-        **Logged Information**:
+        Logged Information:
         - Execution timestamp
         - Records processed per task
         - Task status
         - Execution time
         
-        **Output**: `pipeline_execution_log` table
+        Output: `pipeline_execution_log` table
         """
     )
     
@@ -382,15 +382,15 @@ with DAG(
         doc_md="""
         ### Monitor Pipeline Health
         
-        **Purpose**: Check pipeline health and data quality after execution
+        Purpose: Check pipeline health and data quality after execution
         
-        **Checks**:
+        Checks:
         - Database connectivity
         - Data freshness
         - Validation status
         - Performance metrics
         
-        **Output**: Health status and alerts if needed
+        Output: Health status and alerts if needed
         """
     )
     

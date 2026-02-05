@@ -6,6 +6,7 @@ import os
 from dataclasses import dataclass
 from typing import List, Dict
 
+
 @dataclass
 class DatabaseConfig:
     """Database connection configurations"""
@@ -23,6 +24,7 @@ class DatabaseConfig:
     POSTGRES_DATABASE: str = os.getenv('POSTGRES_DATABASE', 'analytics_db')
     POSTGRES_USER: str = os.getenv('POSTGRES_USER', 'analytics_user')
     POSTGRES_PASSWORD: str = os.getenv('POSTGRES_PASSWORD', 'analytics_pass')
+    
     
     @property
     def mysql_connection_string(self) -> str:
@@ -87,14 +89,14 @@ class AirflowConfig:
     
     DAG_ID: str = 'flight_price_pipeline'
     SCHEDULE_INTERVAL: str = '@daily'
-    START_DATE: str = '2024-01-01'
+    START_DATE: str = '2026-02-04'
     CATCHUP: bool = False
     MAX_ACTIVE_RUNS: int = 1
     TAGS: List[str] = None
     
     # Email notifications
     EMAIL_ON_FAILURE: bool = True
-    EMAIL_ON_RETRY: bool = False
+    EMAIL_ON_RETRY: bool = True
     EMAIL_LIST: List[str] = None
     
     # Retry configuration
