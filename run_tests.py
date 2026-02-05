@@ -1,9 +1,9 @@
 """
 Test runner for flight price pipeline
-Run this script to execute all test suites
 """
 import sys
 import subprocess
+
 
 def run_command(cmd, description):
     """Run a command and report results"""
@@ -33,7 +33,7 @@ def main():
     
     # Test 1: Monitoring module functionality
     results['Monitoring Module'] = run_command(
-        'docker exec airflow-webserver python -c "import sys; sys.path.append(\'/opt/airflow/scripts\'); from monitoring import PipelineMonitor; m = PipelineMonitor(); print(\'✓ Monitoring module loaded\'); metrics = m.get_performance_metrics(); print(f\'✓ Tasks tracked: {len(metrics.get(\\\"tasks\\\", []))}\'); print(\'✅ All monitoring tests PASSED\')"',
+        'docker exec airflow-webserver python -c "import sys; sys.path.append(\'/opt/airflow/scripts\'); from monitoring import PipelineMonitor; m = PipelineMonitor(); print(\'✓ Monitoring module loaded\'); metrics = m.get_performance_metrics(); print(f\'✓ Tasks tracked: {len(metrics.get(\\\"tasks\\\", []))}\'); print(\' All monitoring tests PASSED\')"',
         "Monitoring Module Tests"
     )
     
